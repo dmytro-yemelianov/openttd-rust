@@ -10,6 +10,16 @@ This repository currently contains design specifications and source assessment e
 - [Translation scope, effort estimates and calibration plan](specs/001-port-scope-and-estimate.md)
 - [Ontology, taxonomy, Rust data models and people extension](specs/002-ontology-and-data-model.md)
 
+## Formal Verification
+
+Critical components of the engine will be formally verified using the Lean 4 theorem prover to ensure mathematical correctness of key invariants:
+- Tile indexing and bounds checking
+- Cargo conservation properties
+- Person location invariants
+- ID generation and validity
+
+Verification theories are located in the `lean/` directory.
+
 ## Workspace layout
 
 Keep the original reference checkout beside this repository:
@@ -17,7 +27,8 @@ Keep the original reference checkout beside this repository:
 ```text
 github/
 ├── OpenTTD/        # Original C++ repository
-└── openttd-rust/   # Rust-core specifications and future implementation
+├── openttd-rust/   # Rust-core specifications and future implementation
+└── lean/           # Lean 4 verification theories
 ```
 
 The reference is a separate Git repository, not a submodule or vendored source tree. [upstream.json](upstream.json) records its origin and the exact commit used for this assessment. Future updates to the reference require an explicit baseline review.
