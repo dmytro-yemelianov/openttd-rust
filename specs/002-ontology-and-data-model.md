@@ -51,7 +51,7 @@ Do not infer a workforce model from the words “passenger,” “town populatio
 | State durability | Canonical saved state; reconstructible cache; presentation state; external observation | Decide per field; `NOSAVE` alone does not prove behavior is independent of it |
 | Outcome | Command rejection; physical wait; transport arrival; platform authorization result | A denial is not a movement, and a full vessel is not a regulatory refusal |
 
-The source-size taxonomy in [inventory.py](inventory.py) is intentionally different: it groups filenames for measurement, not domain ownership. For example, `src/viewport.cpp` lands in the residual application bucket and `src/network/network_gui.cpp` lands in networking. It cannot establish the size of a clean core by subtraction.
+The source-size taxonomy in [inventory.py](../tools/inventory.py) is intentionally different: it groups filenames for measurement, not domain ownership. For example, `src/viewport.cpp` lands in the residual application bucket and `src/network/network_gui.cpp` lands in networking. It cannot establish the size of a clean core by subtraction.
 
 ## 3. Relationships and cardinalities
 
