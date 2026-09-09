@@ -1,0 +1,7 @@
+{
+  "repository": "https://github.com/OpenTTD/OpenTTD.git",
+  "relative_path": "../OpenTTD",
+  "assessed_commit": "18fc940ebf4a837d8f510050774ec20a2acab63a",
+  "assessed_on": "2026-09-09",
+  "role": "Behavioral reference; separate sibling checkout"
+}
