@@ -220,6 +220,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "transport-render"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "thiserror",
+ "tracing",
+ "transport-api",
+ "transport-people",
+ "transport-sim",
+ "transport-types",
+ "transport-world",
+]
+
+[[package]]
 name = "transport-sim"
 version = "0.1.0"
 dependencies = [

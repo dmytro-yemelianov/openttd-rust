@@ -5,6 +5,7 @@ import Transport.JournalIntegrity
 import Transport.TraceEquivalence
 import Transport.RingBuffer
 import Transport.PeepEconomy
+import Transport.Render
 
 namespace Transport
 
