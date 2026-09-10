@@ -23,4 +23,9 @@ pub trait SubsystemDriver: Send {
 
     /// Executes the designated phase within the deterministic tick cycle.
     fn execute_phase(&mut self, phase: Phase, ctx: &mut KernelContext) -> Result<(), DriverError>;
+
+    /// Optional downcast helper for testing and inspection.
+    fn as_any_mut(&mut self) -> Option<&mut dyn std::any::Any> {
+        None
+    }
 }

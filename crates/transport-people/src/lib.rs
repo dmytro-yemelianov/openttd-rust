@@ -5,6 +5,16 @@
 //! - Journeys and assignments
 //! - Boarding and authorization logic
 
+pub mod peep;
+pub mod turnstile;
+pub mod manifest;
+pub mod driver;
+
+pub use peep::*;
+pub use turnstile::*;
+pub use manifest::*;
+pub use driver::*;
+
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use transport_types::enum_::{AuthorizationEvidenceType, JourneyLegType, PersonActivity};
@@ -231,3 +241,6 @@ impl PeopleSimulator {
 
     // TODO: more methods for managing journeys, assignments, boarding, etc.
 }
+
+#[cfg(test)]
+mod tests;

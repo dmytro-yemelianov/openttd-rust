@@ -46,6 +46,10 @@ impl Microkernel {
     pub fn tick(&mut self) -> Result<(), DriverError> {
         self.intent_buffer.clear();
         self.event_buffer.clear();
+        self.vehicle_order_buffer.clear();
+        self.vehicle_order_buffer
+            .extend(self.world.vehicles.keys().copied());
+        self.vehicle_order_buffer.sort_unstable();
 
         // 1. Phase::Ingress
         self.dispatch_phase(Phase::Ingress)?;
