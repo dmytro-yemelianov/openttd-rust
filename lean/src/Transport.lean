@@ -1,6 +1,7 @@
 import Transport.IDValidity
 import Transport.PersonLocation
 import Transport.PathfindingBudget
+import Transport.JournalIntegrity
 
 namespace Transport
 

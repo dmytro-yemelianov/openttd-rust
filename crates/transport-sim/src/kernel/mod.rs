@@ -89,34 +89,34 @@ impl Microkernel {
 
     /// Transactionally commit staged intents after validating capability permissions.
     fn commit_intents(&mut self) -> Result<(), DriverError> {
-        for (token, intent) in self.intent_buffer.drain(..) {
+        for (token, intent) in &self.intent_buffer {
             match intent {
                 KernelIntent::CreditRevenue { company_id, amount } => {
-                    if !token.can_mutate_company(company_id) {
-                        return Err(DriverError::Unauthorized(token));
+                    if !token.can_mutate_company(*company_id) {
+                        return Err(DriverError::Unauthorized(*token));
                     }
-                    if let Some(company) = self.world.companies.get_mut(&company_id) {
-                        company.money = company.money.saturating_add(amount);
+                    if let Some(company) = self.world.companies.get_mut(company_id) {
+                        company.money = company.money.saturating_add(*amount);
                     }
                 }
                 KernelIntent::DeductCost { company_id, amount } => {
-                    if !token.can_mutate_company(company_id) {
-                        return Err(DriverError::Unauthorized(token));
+                    if !token.can_mutate_company(*company_id) {
+                        return Err(DriverError::Unauthorized(*token));
                     }
-                    if let Some(company) = self.world.companies.get_mut(&company_id) {
-                        company.money = company.money.saturating_sub(amount);
+                    if let Some(company) = self.world.companies.get_mut(company_id) {
+                        company.money = company.money.saturating_sub(*amount);
                     }
                 }
                 KernelIntent::MoveVehicle {
                     vehicle_id,
                     to_tile,
                 } => {
-                    if let Some(vehicle) = self.world.vehicles.get_mut(&vehicle_id) {
+                    if let Some(vehicle) = self.world.vehicles.get_mut(vehicle_id) {
                         if !token.can_mutate_company(vehicle.company_id) {
-                            return Err(DriverError::Unauthorized(token));
+                            return Err(DriverError::Unauthorized(*token));
                         }
-                        if self.world.map.size().is_valid_index(to_tile) {
-                            vehicle.position = to_tile;
+                        if self.world.map.size().is_valid_index(*to_tile) {
+                            vehicle.position = *to_tile;
                         }
                     }
                 }
@@ -128,7 +128,7 @@ impl Microkernel {
                     is_load,
                 } => {
                     let (veh_company, can_proceed) =
-                        if let Some(vehicle) = self.world.vehicles.get(&vehicle_id) {
+                        if let Some(vehicle) = self.world.vehicles.get(vehicle_id) {
                             (
                                 vehicle.company_id,
                                 token.can_mutate_company(vehicle.company_id),
@@ -137,17 +137,17 @@ impl Microkernel {
                             continue;
                         };
                     if !can_proceed {
-                        return Err(DriverError::Unauthorized(token));
+                        return Err(DriverError::Unauthorized(*token));
                     }
 
-                    if is_load {
+                    if *is_load {
                         // Station -> Vehicle
                         let to_load =
-                            if let Some(station) = self.world.stations.get_mut(&station_id) {
+                            if let Some(station) = self.world.stations.get_mut(station_id) {
                                 if let Some(goods) = station
                                     .goods
                                     .iter_mut()
-                                    .find(|g| g.cargo_type == cargo_type)
+                                    .find(|g| g.cargo_type == *cargo_type)
                                 {
                                     let transfer = std::cmp::min(goods.amount.0, amount.0);
                                     goods.amount.0 -= transfer;
@@ -160,22 +160,22 @@ impl Microkernel {
                             };
 
                         if to_load.0 > 0 {
-                            if let Some(vehicle) = self.world.vehicles.get_mut(&vehicle_id) {
+                            if let Some(vehicle) = self.world.vehicles.get_mut(vehicle_id) {
                                 if let Some(e) =
-                                    vehicle.cargo.iter_mut().find(|(c, _)| *c == cargo_type)
+                                    vehicle.cargo.iter_mut().find(|(c, _)| *c == *cargo_type)
                                 {
                                     e.1 .0 += to_load.0;
                                 } else {
-                                    vehicle.cargo.push((cargo_type, to_load));
+                                    vehicle.cargo.push((*cargo_type, to_load));
                                 }
                             }
                         }
                     } else {
                         // Vehicle -> Station
                         let to_unload =
-                            if let Some(vehicle) = self.world.vehicles.get_mut(&vehicle_id) {
+                            if let Some(vehicle) = self.world.vehicles.get_mut(vehicle_id) {
                                 if let Some(e) =
-                                    vehicle.cargo.iter_mut().find(|(c, _)| *c == cargo_type)
+                                    vehicle.cargo.iter_mut().find(|(c, _)| *c == *cargo_type)
                                 {
                                     let transfer = std::cmp::min(e.1 .0, amount.0);
                                     e.1 .0 -= transfer;
@@ -188,16 +188,16 @@ impl Microkernel {
                             };
 
                         if to_unload.0 > 0 {
-                            if let Some(station) = self.world.stations.get_mut(&station_id) {
+                            if let Some(station) = self.world.stations.get_mut(station_id) {
                                 if let Some(g) = station
                                     .goods
                                     .iter_mut()
-                                    .find(|g| g.cargo_type == cargo_type)
+                                    .find(|g| g.cargo_type == *cargo_type)
                                 {
                                     g.delivered_since_last_visit.0 += to_unload.0;
                                 } else {
                                     let mut g =
-                                        transport_world::definitions::GoodsEntry::new(cargo_type);
+                                        transport_world::definitions::GoodsEntry::new(*cargo_type);
                                     g.delivered_since_last_visit = to_unload;
                                     station.goods.push(g);
                                 }
@@ -211,7 +211,7 @@ impl Microkernel {
                     }
                 }
                 KernelIntent::EmitEvent(event) => {
-                    self.event_buffer.push(event);
+                    self.event_buffer.push(event.clone());
                 }
             }
         }

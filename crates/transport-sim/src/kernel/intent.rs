@@ -1,8 +1,9 @@
+use serde::{Deserialize, Serialize};
 use super::event::KernelEvent;
 use transport_types::{CargoAmount, CargoType, CompanyID, Money, StationID, TileIndex, VehicleID};
 
 /// Transactional intent submitted by a driver to be validated and committed during Phase::Commit.
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum KernelIntent {
     /// Credit revenue to a company treasury
     CreditRevenue {

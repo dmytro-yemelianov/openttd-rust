@@ -18,6 +18,15 @@ use transport_people::{Location, PeopleSimulator};
 use transport_sim::{CommandOutcome, QueuedCommand, Simulator, World};
 use transport_types::StationID;
 
+pub mod async_driver;
+pub mod journal;
+
+pub use async_driver::{AsyncPersistenceDriver, AsyncPersistenceWorker, WorkerCommand};
+pub use journal::{
+    apply_intent_to_world, compute_crc32, replay_journal, FrameHeader, JournalReader,
+    JournalRecord, JournalWriter, WAL_MAGIC,
+};
+
 /// Current snapshot format version
 pub const CURRENT_SNAPSHOT_VERSION: u32 = 1;
 
