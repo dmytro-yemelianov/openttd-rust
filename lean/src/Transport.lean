@@ -4,6 +4,7 @@ import Transport.PathfindingBudget
 import Transport.JournalIntegrity
 import Transport.TraceEquivalence
 import Transport.RingBuffer
+import Transport.PeepEconomy
 
 namespace Transport
 

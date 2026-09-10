@@ -9,11 +9,15 @@ pub mod peep;
 pub mod turnstile;
 pub mod manifest;
 pub mod driver;
+pub mod commute;
+pub mod town_driver;
 
 pub use peep::*;
 pub use turnstile::*;
 pub use manifest::*;
 pub use driver::*;
+pub use commute::*;
+pub use town_driver::*;
 
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;

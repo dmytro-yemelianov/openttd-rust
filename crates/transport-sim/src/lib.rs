@@ -20,10 +20,11 @@ use std::collections::{HashMap, VecDeque};
 use transport_types::enum_::{OrderType, VehicleState};
 use transport_types::unit::{CargoAmount, Money, Ticks};
 use transport_types::{
-    CargoType, CompanyID, EngineID, OrderIndex, OrderListID, StationID, TileIndex, VehicleID,
+    BuildingID, CargoType, CompanyID, EngineID, OrderIndex, OrderListID, StationID, TileIndex,
+    TownID, VehicleID,
 };
 use transport_world::map::{Map, MapSize};
-use transport_world::{definitions::*, entities::*};
+use transport_world::{definitions::*, entities::*, town::*};
 
 /// Command queue entry for the simulation agentic loop
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -139,6 +140,8 @@ pub struct World {
     pub current_company_id: CompanyID,
     pub tick: Ticks,
     pub money_scale: u32, // For inflation, etc.
+    pub towns: HashMap<TownID, Town>,
+    pub buildings: HashMap<BuildingID, Building>,
     /// Derived spatial lookup mapping tile indices to station IDs
     #[serde(skip)]
     pub tile_to_station: HashMap<TileIndex, StationID>,
@@ -189,6 +192,8 @@ impl World {
             current_company_id: CompanyID::INVALID, // Will be set when first company is created
             tick: Ticks(0),
             money_scale: 100, // 1.00 scale
+            towns: HashMap::new(),
+            buildings: HashMap::new(),
             tile_to_station: HashMap::new(),
         }
     }

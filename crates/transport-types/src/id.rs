@@ -73,6 +73,18 @@ impl EngineID {
     pub const INVALID: Self = Self(u32::MAX);
 }
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub struct TownID(pub u32);
+impl TownID {
+    pub const INVALID: Self = Self(u32::MAX);
+}
+
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
+pub struct BuildingID(pub u32);
+impl BuildingID {
+    pub const INVALID: Self = Self(u32::MAX);
+}
+
 /// A tile index in the simulation map
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 pub struct TileIndex {

@@ -10,7 +10,9 @@ pub mod definitions;
 pub mod entities;
 pub mod map;
 pub mod relationships;
+pub mod town;
 
 pub use definitions::*;
 pub use entities::*;
 pub use map::*;
+pub use town::*;
