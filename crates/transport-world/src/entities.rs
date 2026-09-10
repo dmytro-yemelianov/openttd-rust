@@ -45,7 +45,8 @@ pub struct Vehicle {
     pub state: VehicleState, // Execution state of vehicle in order schedule
     pub cargo: Vec<(CargoType, CargoAmount)>, // Cargo carried
     pub orders: OrderListID,           // The order list this vehicle is following
-                                       // TODO: more fields (state, age, reliability, etc.)
+    #[serde(default)]
+    pub next_waypoint: Option<TileIndex>, // Next navigation waypoint planned by solvers
 }
 
 impl Vehicle {
@@ -69,6 +70,7 @@ impl Vehicle {
             state: VehicleState::Idle,
             cargo: Vec::new(),
             orders,
+            next_waypoint: None,
         }
     }
 }

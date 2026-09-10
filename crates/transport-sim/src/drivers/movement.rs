@@ -15,7 +15,7 @@ impl MovementDriver {
     }
 
     fn advance_vehicle(vehicle_id: VehicleID, ctx: &mut KernelContext) {
-        let (orders_id, vehicle_pos, vehicle_state, current_order_opt, company_id) = {
+        let (orders_id, vehicle_pos, vehicle_state, current_order_opt, company_id, planned_waypoint) = {
             let vehicle = match ctx.world.vehicles.get(&vehicle_id) {
                 Some(v) => v,
                 None => return,
@@ -26,6 +26,7 @@ impl MovementDriver {
                 vehicle.state,
                 vehicle.current_order,
                 vehicle.company_id,
+                vehicle.next_waypoint,
             )
         };
 
@@ -97,7 +98,11 @@ impl MovementDriver {
                         v.state = VehicleState::Loading;
                     }
                 } else if let Some(target) = target_tile {
-                    let next_pos = step_towards(vehicle_pos, target, &ctx.world.map);
+                    let next_pos = if let Some(waypoint) = planned_waypoint {
+                        waypoint
+                    } else {
+                        step_towards(vehicle_pos, target, &ctx.world.map)
+                    };
                     let arrived = ctx
                         .world
                         .stations
@@ -114,6 +119,7 @@ impl MovementDriver {
                         v.position = next_pos;
                         v.current_order = next_order;
                         v.state = next_state;
+                        v.next_waypoint = None;
                     }
 
                     // Stage move intent for capability verification & audit

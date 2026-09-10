@@ -7,9 +7,11 @@
 
 pub mod drivers;
 pub mod kernel;
+pub mod solvers;
 
 pub use drivers::*;
 pub use kernel::*;
+pub use solvers::*;
 
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
