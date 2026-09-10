@@ -1,0 +1,116 @@
+[
+  {
+    "tick": 0,
+    "companies": {
+      "1": 10000
+    },
+    "vehicles": {
+      "1": {
+        "position": { "x": 2, "y": 2 },
+        "state": "Idle",
+        "cargo": [
+          [1, 40]
+        ]
+      }
+    },
+    "stations": {
+      "1": {},
+      "2": {}
+    }
+  },
+  {
+    "tick": 1,
+    "companies": {
+      "1": 10000
+    },
+    "vehicles": {
+      "1": {
+        "position": { "x": 3, "y": 2 },
+        "state": "Traveling",
+        "cargo": [
+          [1, 40]
+        ]
+      }
+    },
+    "stations": {
+      "1": {},
+      "2": {}
+    }
+  },
+  {
+    "tick": 2,
+    "companies": {
+      "1": 10000
+    },
+    "vehicles": {
+      "1": {
+        "position": { "x": 4, "y": 2 },
+        "state": "Traveling",
+        "cargo": [
+          [1, 40]
+        ]
+      }
+    },
+    "stations": {
+      "1": {},
+      "2": {}
+    }
+  },
+  {
+    "tick": 3,
+    "companies": {
+      "1": 10000
+    },
+    "vehicles": {
+      "1": {
+        "position": { "x": 5, "y": 2 },
+        "state": "Traveling",
+        "cargo": [
+          [1, 40]
+        ]
+      }
+    },
+    "stations": {
+      "1": {},
+      "2": {}
+    }
+  },
+  {
+    "tick": 4,
+    "companies": {
+      "1": 10400
+    },
+    "vehicles": {
+      "1": {
+        "position": { "x": 6, "y": 2 },
+        "state": "Loading",
+        "cargo": []
+      }
+    },
+    "stations": {
+      "1": {},
+      "2": {
+        "1": 40
+      }
+    }
+  },
+  {
+    "tick": 5,
+    "companies": {
+      "1": 10400
+    },
+    "vehicles": {
+      "1": {
+        "position": { "x": 6, "y": 2 },
+        "state": "Loading",
+        "cargo": []
+      }
+    },
+    "stations": {
+      "1": {},
+      "2": {
+        "1": 40
+      }
+    }
+  }
+]

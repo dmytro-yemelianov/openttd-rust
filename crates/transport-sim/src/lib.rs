@@ -7,10 +7,12 @@
 
 pub mod drivers;
 pub mod kernel;
+pub mod oracle;
 pub mod solvers;
 
 pub use drivers::*;
 pub use kernel::*;
+pub use oracle::*;
 pub use solvers::*;
 
 use serde::{Deserialize, Serialize};
