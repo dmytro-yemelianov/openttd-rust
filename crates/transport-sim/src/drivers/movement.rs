@@ -30,8 +30,8 @@ impl MovementDriver {
             )
         };
 
-        let orders_len = match ctx.world.order_lists.get(&orders_id) {
-            Some(list) if !list.is_empty() => list.len(),
+        let orders = match ctx.world.order_lists.get(&orders_id) {
+            Some(list) if !list.is_empty() => list,
             _ => {
                 if let Some(v) = ctx.world.vehicles.get_mut(&vehicle_id) {
                     v.current_order = None;
@@ -40,6 +40,7 @@ impl MovementDriver {
                 return;
             }
         };
+        let orders_len = orders.len();
 
         let current_idx = match current_order_opt {
             Some(idx) if (idx.0 as usize) < orders_len => idx.0 as usize,
@@ -52,7 +53,10 @@ impl MovementDriver {
             }
         };
 
-        let order = ctx.world.order_lists.get(&orders_id).unwrap()[current_idx].clone();
+        let order = match orders.get(current_idx) {
+            Some(o) => o.clone(),
+            None => return,
+        };
 
         match order {
             OrderType::WaitTime(ticks) => {

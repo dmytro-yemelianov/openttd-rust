@@ -294,18 +294,19 @@ impl SubsystemDriver for WaterPathSolver {
                 continue;
             }
 
-            let orders_len = match ctx.world.order_lists.get(&orders_id) {
-                Some(list) if !list.is_empty() => list.len(),
+            let orders = match ctx.world.order_lists.get(&orders_id) {
+                Some(list) if !list.is_empty() => list,
                 _ => continue,
             };
+            let orders_len = orders.len();
 
             let current_idx = current_order_opt
                 .map(|idx| idx.0 as usize)
                 .unwrap_or(0)
                 % orders_len;
 
-            let target_station_id = match &ctx.world.order_lists.get(&orders_id).unwrap()[current_idx] {
-                OrderType::GoToStation { station_id, .. } => *station_id,
+            let target_station_id = match orders.get(current_idx) {
+                Some(OrderType::GoToStation { station_id, .. }) => *station_id,
                 _ => {
                     self.cached_routes.remove(&vehicle_id);
                     if let Some(v) = ctx.world.vehicles.get_mut(&vehicle_id) {

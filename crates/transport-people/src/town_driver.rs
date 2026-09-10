@@ -21,6 +21,7 @@ pub struct TownEconomyDriver {
     pub next_person_id: u64,
     pub next_building_id: u32,
     pub default_fare: Money,
+    pub completed_buffer: Vec<(PersonID, bool, u8, BuildingID)>,
 }
 
 impl Default for TownEconomyDriver {
@@ -38,6 +39,7 @@ impl TownEconomyDriver {
             next_person_id: 1,
             next_building_id: 100,
             default_fare: Money(5),
+            completed_buffer: Vec::new(),
         }
     }
 
@@ -48,7 +50,26 @@ impl TownEconomyDriver {
     }
 
     /// Find an existing station within walking radius (<= 3 Manhattan distance) of a tile.
+    /// Uses O(1) tile_to_station spatial index check across the 25-tile neighborhood.
     fn find_nearby_station(&self, tile: TileIndex, ctx: &KernelContext) -> Option<StationID> {
+        let tx = tile.x as i32;
+        let ty = tile.y as i32;
+
+        for dy in -3..=3i32 {
+            let max_dx = 3 - dy.abs();
+            for dx in -max_dx..=max_dx {
+                let nx = tx + dx;
+                let ny = ty + dy;
+                if nx >= 0 && ny >= 0 && nx <= u16::MAX as i32 && ny <= u16::MAX as i32 {
+                    let candidate = TileIndex::new(nx as u16, ny as u16);
+                    if let Some(sid) = ctx.world.tile_to_station.get(&candidate) {
+                        return Some(*sid);
+                    }
+                }
+            }
+        }
+
+        // Fallback to iterating stations only if tile_to_station didn't match
         for (sid, st) in &ctx.world.stations {
             for s_tile in &st.tiles {
                 let dx = (s_tile.x as i32 - tile.x as i32).abs();
@@ -67,17 +88,11 @@ impl TownEconomyDriver {
             return Ok(());
         }
 
-        // Collect residential and workplace buildings deterministically
-        let mut residences = Vec::new();
-        let mut workplaces = Vec::new();
-
-        for b in ctx.world.buildings.values() {
-            if b.is_residence() {
-                residences.push(b.clone());
-            } else if b.is_workplace() {
-                workplaces.push(b.clone());
-            }
-        }
+        // Collect residential and workplace building references without cloning
+        let residences: Vec<&transport_world::town::Building> =
+            ctx.world.buildings.values().filter(|b| b.is_residence()).collect();
+        let workplaces: Vec<&transport_world::town::Building> =
+            ctx.world.buildings.values().filter(|b| b.is_workplace()).collect();
 
         if residences.is_empty() || workplaces.is_empty() {
             return Ok(());
@@ -175,7 +190,7 @@ impl TownEconomyDriver {
         }
 
         // 2. Evaluate arrival at destination or trip abandonment
-        let mut completed_or_abandoned = Vec::new();
+        self.completed_buffer.clear();
 
         for (&person_id, (peep, plan)) in &self.active_commuters {
             let is_arrived = plan.is_at_destination(peep.current_tile);
@@ -183,13 +198,13 @@ impl TownEconomyDriver {
 
             if is_arrived {
                 let score = plan.calculate_satisfaction(ctx.tick);
-                completed_or_abandoned.push((person_id, true, score, plan.origin_building));
+                self.completed_buffer.push((person_id, true, score, plan.origin_building));
             } else if is_expired {
-                completed_or_abandoned.push((person_id, false, 10, plan.origin_building));
+                self.completed_buffer.push((person_id, false, 10, plan.origin_building));
             }
         }
 
-        for (person_id, fulfilled, satisfaction, orig_bldg) in completed_or_abandoned {
+        for (person_id, fulfilled, satisfaction, orig_bldg) in self.completed_buffer.drain(..) {
             self.active_commuters.remove(&person_id);
 
             // Find origin town and record outcome
@@ -205,6 +220,10 @@ impl TownEconomyDriver {
 
     /// Phase::Egress — Evaluate fulfillment-driven town growth pulses.
     fn handle_egress(&mut self, ctx: &mut KernelContext) -> Result<(), DriverError> {
+        if ctx.world.towns.is_empty() {
+            return Ok(());
+        }
+
         let mut town_ids: Vec<TownID> = ctx.world.towns.keys().copied().collect();
         town_ids.sort_unstable(); // Deterministic ordering
 

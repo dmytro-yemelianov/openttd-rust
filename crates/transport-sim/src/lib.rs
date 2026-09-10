@@ -465,7 +465,14 @@ impl Simulator {
                     }
                 }
                 let cost = Money(1000 * tiles.len() as i64);
-                let company = self.world.companies.get_mut(company_id).unwrap();
+                let company = match self.world.companies.get_mut(company_id) {
+                    Some(c) => c,
+                    None => {
+                        return CommandResult::Failure(CommandFailure::CompanyNotFound(
+                            *company_id,
+                        ))
+                    }
+                };
                 if company.money.0 < cost.0 {
                     return CommandResult::Failure(CommandFailure::InsufficientFunds {
                         required: cost,
@@ -525,7 +532,14 @@ impl Simulator {
                     .get(engine_id)
                     .map(|e| e.cost)
                     .unwrap_or(Money(5000));
-                let company = self.world.companies.get_mut(company_id).unwrap();
+                let company = match self.world.companies.get_mut(company_id) {
+                    Some(c) => c,
+                    None => {
+                        return CommandResult::Failure(CommandFailure::CompanyNotFound(
+                            *company_id,
+                        ))
+                    }
+                };
                 if company.money.0 < cost.0 {
                     return CommandResult::Failure(CommandFailure::InsufficientFunds {
                         required: cost,

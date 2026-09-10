@@ -188,17 +188,17 @@ impl Town {
         let occupied_tiles: std::collections::HashSet<TileIndex> =
             existing_buildings.values().map(|b| b.tile).collect();
 
-        // Radiate outwards from center in radius 1..=8
-        for r in 1..=8i16 {
-            let cx = self.center.x as i16;
-            let cy = self.center.y as i16;
+        let cx = self.center.x as i32;
+        let cy = self.center.y as i32;
 
+        // Radiate outwards from center in radius 1..=8
+        for r in 1..=8i32 {
             for dy in -r..=r {
                 for dx in -r..=r {
                     let nx = cx + dx;
                     let ny = cy + dy;
 
-                    if nx >= 0 && ny >= 0 {
+                    if nx >= 0 && ny >= 0 && nx <= u16::MAX as i32 && ny <= u16::MAX as i32 {
                         let candidate = TileIndex::new(nx as u16, ny as u16);
                         if !map.size().is_valid_index(candidate) {
                             continue;
