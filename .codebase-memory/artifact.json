@@ -1,0 +1,11 @@
+{
+    "schema_version": 2,
+    "commit": "b49ad24925acb32b155485b0dde479b6c3bc4f54",
+    "indexed_at": "2026-09-10T21:19:52Z",
+    "project": "Users-dmytro-github-openttd-rust",
+    "nodes": 1104,
+    "edges": 3250,
+    "original_size": 5308416,
+    "compressed_size": 760749,
+    "compression_level": 3
+}

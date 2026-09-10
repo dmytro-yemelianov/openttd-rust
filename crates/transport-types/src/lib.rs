@@ -1,6 +1,6 @@
-#![doc = "Transport simulation primitive types and IDs"]
-#!
-#! This crate provides the foundational types used across the transport simulation:
+//! # Transport simulation primitive types and IDs
+//!
+//! This crate provides the foundational types used across the transport simulation:
 //! - Strongly-typed IDs for entities
 //! - Numeric units with compile-time safety
 //! - Primitive enums for domain concepts

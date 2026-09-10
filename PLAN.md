@@ -2,6 +2,8 @@
 
 Based on the specifications in `specs/001-port-scope-and-estimate.md` and `specs/002-ontology-and-data-model.md`.
 
+Immediate repair sequence and acceptance gates: [Correctness and performance repair plan](specs/003-correctness-and-performance-plan.md). This takes precedence over the stale scaffold setup actions below.
+
 ## Phase 0: Preparation and Behavioral Reference (A0 - Ontology, compatibility contract and C++ oracle)
 
 ### Goals:
@@ -26,7 +28,7 @@ Based on the specifications in `specs/001-port-scope-and-estimate.md` and `specs
    - Seven-operational-day scenario
 3. **Export canonical state traces** from C++ reference:
    - Position, orders, cargo, clocks, PRNG state at regular ticks
-   - Focus on ship movement, loading/unloading, person journeys
+   - Focus on ship movement and loading/unloading; validate new person journeys separately against extension invariants
 4. **Define ontology subset** for ship-and-crew:
    - Entities: World, Tile, Dock (as Station), Ship (Vehicle), Cargo, Person, Journey
    - Relationships: Company owns Vehicles, Stations maintain Goods Entities, etc.
@@ -211,7 +213,7 @@ Based on the specifications in `specs/001-port-scope-and-estimate.md` and `specs
 ### Phase 3:
 - Ship moves correctly along water path
 - Arrival at docks triggers appropriate orders
-- Trace comparison shows <1% divergence in key metrics (position, cargo) vs C++
+- Trace comparison matches declared compatible fields exactly at fixed tick boundaries; intentional differences are documented separately
 
 ### Phase 4:
 - Person location invariant maintained

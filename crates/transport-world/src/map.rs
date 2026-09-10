@@ -1,8 +1,20 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use crate::id::{StationID, TileIndex};
-use crate::transport_types::unit::Coord;
-use crate::transport_types::enum_::TileKind;
+use transport_types::{StationID, TileIndex};
+use transport_types::enum_::TileKind;
+
+/// Errors that can occur during Map construction and validation
+#[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
+pub enum MapError {
+    #[error("Invalid map dimensions: width and height must be non-zero (got {width}x{height})")]
+    ZeroDimension { width: u16, height: u16 },
+    #[error("Map allocation limit exceeded: {0} tiles exceeds maximum allowed")]
+    AllocationTooLarge(u32),
+    #[error("Tile index out of bounds: ({x}, {y})")]
+    OutOfBounds { x: u16, y: u16 },
+    #[error("Map tile buffer mismatch: expected {expected} tiles, got {actual}")]
+    TileCountMismatch { expected: usize, actual: usize },
+}
 
 /// Size of the simulation map in tiles
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -25,13 +37,13 @@ impl MapSize {
     }
 }
 
-/// Base tile record (8 bytes)
+/// Base tile record (16 bytes aligned)
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct TileBase {
     /// Kind of terrain/infrastructure
     pub kind: TileKind,
     /// Owner company (for infrastructure)
-    pub owner: Option<id::CompanyID>,
+    pub owner: Option<transport_types::CompanyID>,
     /// Height above sea level (in millimeters?)
     pub height: i16,
     /// Local water height (for rivers, etc.)
@@ -45,7 +57,7 @@ pub struct TileExtension {
     pub data: u32,
 }
 
-/// Complete tile record (12 bytes total)
+/// Complete tile record (20 bytes total: 16-byte base + 4-byte extension)
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct Tile {
     pub base: TileBase,
@@ -90,16 +102,58 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn new(size: MapSize) -> Self {
-        let tile_count = size.area() as usize;
-        Self {
+    pub const MAX_TILES: u32 = 4096 * 4096; // 16M tiles max
+
+    /// Try to construct a new map with dimension and allocation validation
+    pub fn try_new(size: MapSize) -> Result<Self, MapError> {
+        if size.width == 0 || size.height == 0 {
+            return Err(MapError::ZeroDimension {
+                width: size.width,
+                height: size.height,
+            });
+        }
+        let area = size.area();
+        if area > Self::MAX_TILES {
+            return Err(MapError::AllocationTooLarge(area));
+        }
+        let tile_count = area as usize;
+        Ok(Self {
             size,
             tiles: vec![Tile::new_empty(); tile_count],
-        }
+        })
+    }
+
+    /// Construct a new map, falling back safely to a 1x1 map on invalid dimensions
+    pub fn new(size: MapSize) -> Self {
+        Self::try_new(size).unwrap_or_else(|_| Self {
+            size: MapSize::new(1, 1),
+            tiles: vec![Tile::new_empty()],
+        })
     }
 
     pub fn size(&self) -> MapSize {
         self.size
+    }
+
+    /// Validate map dimensions, bounds and tile count integrity
+    pub fn validate(&self) -> Result<(), MapError> {
+        if self.size.width == 0 || self.size.height == 0 {
+            return Err(MapError::ZeroDimension {
+                width: self.size.width,
+                height: self.size.height,
+            });
+        }
+        let area = self.size.area();
+        if area > Self::MAX_TILES {
+            return Err(MapError::AllocationTooLarge(area));
+        }
+        if self.tiles.len() != area as usize {
+            return Err(MapError::TileCountMismatch {
+                expected: area as usize,
+                actual: self.tiles.len(),
+            });
+        }
+        Ok(())
     }
 
     /// Get linear index from tile coordinates
@@ -141,9 +195,48 @@ impl Map {
 
     /// Get station at tile (if any)
     pub fn station_at(&self, tile: TileIndex) -> Option<StationID> {
-        // This would normally look up from a station map
-        // For now, we'll store station locations separately
-        None
+        self.get(tile).and_then(|t| {
+            if matches!(t.base.kind, TileKind::Station) {
+                Some(StationID(t.extension.data))
+            } else {
+                None
+            }
+        })
+    }
+
+    /// Set station at coordinates
+    pub fn set_station_at(
+        &mut self,
+        tile: TileIndex,
+        station_id: StationID,
+        owner: Option<transport_types::CompanyID>,
+    ) -> Result<(), &'static str> {
+        if let Some(t) = self.get_mut(tile) {
+            t.base.kind = TileKind::Station;
+            t.base.owner = owner;
+            t.extension.data = station_id.0;
+            Ok(())
+        } else {
+            Err("Tile index out of bounds")
+        }
+    }
+
+    /// Clear station at coordinates
+    pub fn clear_station_at(&mut self, tile: TileIndex) -> Result<(), &'static str> {
+        if let Some(t) = self.get_mut(tile) {
+            if matches!(t.base.kind, TileKind::Station) {
+                t.base.kind = if t.base.water_height > 0 {
+                    TileKind::Water
+                } else {
+                    TileKind::Clear
+                };
+                t.base.owner = None;
+                t.extension.data = 0;
+            }
+            Ok(())
+        } else {
+            Err("Tile index out of bounds")
+        }
     }
 
     /// Check if tile is water (for ship movement)
@@ -151,8 +244,18 @@ impl Map {
         self.get(tile).map(|t| t.is_water()).unwrap_or(false)
     }
 
+    /// Check if tile is navigable by water vehicles (water or water station/dock)
+    pub fn is_navigable_water(&self, tile: TileIndex) -> bool {
+        self.get(tile)
+            .map(|t| t.is_water() || (matches!(t.base.kind, TileKind::Station) && t.base.water_height > 0))
+            .unwrap_or(false)
+    }
+
     /// Get adjacent tiles (4-directional)
     pub fn adjacent_tiles(&self, tile: TileIndex) -> [Option<TileIndex>; 4] {
+        if !self.size.is_valid_index(tile) {
+            return [None, None, None, None];
+        }
         let x = i32::from(tile.x);
         let y = i32::from(tile.y);
         [
@@ -221,5 +324,73 @@ mod tests {
         // Out of bounds should return None
         assert!(map.get(TileIndex::new(10, 10)).is_none());
         assert!(map.set(TileIndex::new(10, 10), Tile::new_empty()).is_err());
+    }
+
+    #[test]
+    fn test_map_validation_rejects_zero_dimensions() {
+        assert_eq!(
+            Map::try_new(MapSize::new(0, 10)),
+            Err(MapError::ZeroDimension { width: 0, height: 10 })
+        );
+        assert_eq!(
+            Map::try_new(MapSize::new(10, 0)),
+            Err(MapError::ZeroDimension { width: 10, height: 0 })
+        );
+        assert_eq!(
+            Map::try_new(MapSize::new(0, 0)),
+            Err(MapError::ZeroDimension { width: 0, height: 0 })
+        );
+    }
+
+    #[test]
+    fn test_map_validation_rejects_excessive_allocation() {
+        assert_eq!(
+            Map::try_new(MapSize::new(5000, 5000)),
+            Err(MapError::AllocationTooLarge(25_000_000))
+        );
+    }
+
+    #[test]
+    fn test_adjacent_tiles_out_of_bounds_returns_none() {
+        let map = Map::new(MapSize::new(10, 10));
+        assert_eq!(
+            map.adjacent_tiles(TileIndex::new(50, 50)),
+            [None, None, None, None]
+        );
+    }
+
+    #[test]
+    fn test_checked_arithmetic_overflow_and_underflow() {
+        use transport_types::unit::{CargoAmount, Money, Ticks};
+
+        // Money overflow
+        assert_eq!(Money::MAX.checked_add(Money(1)), None);
+        assert_eq!(Money::MIN.checked_sub(Money(1)), None);
+
+        // CargoAmount underflow
+        let c1 = CargoAmount(10);
+        let c2 = CargoAmount(20);
+        assert_eq!(c1.checked_sub(c2), None);
+        assert!(c1.sub_checked(c2).is_err());
+        assert_eq!(c1.saturating_sub(c2), CargoAmount(0));
+
+        // Ticks advance
+        let mut t = Ticks(Ticks::MAX.0 - 1);
+        assert!(t.advance_checked().is_ok());
+        assert!(t.advance_checked().is_err());
+    }
+
+    #[test]
+    fn test_tile_memory_layout_and_size() {
+        use std::mem::size_of;
+        let base_size = size_of::<TileBase>();
+        let ext_size = size_of::<TileExtension>();
+        let tile_size = size_of::<Tile>();
+        println!("TileBase size: {base_size} bytes");
+        println!("TileExtension size: {ext_size} bytes");
+        println!("Tile size: {tile_size} bytes");
+        assert_eq!(base_size, 16);
+        assert_eq!(ext_size, 4);
+        assert_eq!(tile_size, 20);
     }
 }

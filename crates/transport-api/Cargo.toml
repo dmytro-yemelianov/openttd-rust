@@ -1,0 +1,13 @@
+[package]
+name = "transport-api"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+tokio = { version = "1.0", features = ["rt-multi-thread", "macros", "sync", "time"] }
+transport-types = { path = "../transport-types" }
+transport-world = { path = "../transport-world" }
+transport-sim = { path = "../transport-sim" }
+transport-people = { path = "../transport-people" }
+thiserror = "1.0"

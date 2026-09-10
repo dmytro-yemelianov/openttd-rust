@@ -61,11 +61,35 @@ pub enum CargoPaymentFlags {
     Special = 1 << 3,
 }
 
-/// Order types for vehicle schedules
+use crate::id::StationID;
+
+/// Execution state of a vehicle executing its order schedule
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+pub enum VehicleState {
+    /// Idle (e.g. no orders, or unassigned)
+    Idle,
+    /// Traveling towards current destination
+    Traveling,
+    /// Waiting at a station or tile for a specified remaining duration (ticks)
+    Waiting(u16),
+    /// Loading/unloading cargo at a station
+    Loading,
+}
+
+impl Default for VehicleState {
+    fn default() -> Self {
+        Self::Idle
+    }
+}
+
+/// Order types for vehicle schedules
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub enum OrderType {
     /// Go to specific station (and optionally wait for cargo)
-    GoToStation(Option<WaitConditions>),
+    GoToStation {
+        station_id: StationID,
+        conditions: Option<WaitConditions>,
+    },
     /// Go to specific coordinate (water/air)
     GoToTile {
         x: i16,
@@ -84,7 +108,7 @@ pub enum OrderType {
 }
 
 /// Conditions for waiting at a station for cargo
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
 pub struct WaitConditions {
     /// Minimum cargo amount to wait for
     pub min_amount: u16,

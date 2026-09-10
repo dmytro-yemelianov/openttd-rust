@@ -2,7 +2,18 @@
 
 Specifications for a reusable Rust transport simulation core, informed by OpenTTD and extended with individual people, journeys, assignments and boarding authorization.
 
-This repository currently contains design specifications and source assessment evidence. No Rust simulation has been implemented. The initial proposed scope is a headless ship-and-crew simulation; broader OpenTTD compatibility is estimated separately.
+This repository contains specifications and a compiling Rust scaffold for a headless ship-and-crew simulation. Only company creation and basic map access are implemented. Vehicle orders advance incorrectly; movement is absent, and cargo transfer and person transport are placeholders. The two current tests cover map creation and tile access. C++ behavioral parity has not been established.
+
+The simulation tick loop is distinct from the external pi coding agents used to develop this repository. Follow the [repair plan](specs/003-correctness-and-performance-plan.md) and [agent guidelines](AGENTS.md) for bounded implementation work.
+
+Run the baseline checks from the repository root:
+
+```sh
+cargo check --workspace --locked
+cargo test --workspace --locked
+```
+
+The Rust CI workflow runs these checks on pushes and pull requests to main. Existing warnings include unused imports/variables, the default workspace resolver, and the unsupported `workspace.dev-dependencies` manifest key.
 
 ## Specifications
 
@@ -12,7 +23,7 @@ This repository currently contains design specifications and source assessment e
 
 ## Formal Verification
 
-Critical components of the engine will be formally verified using the Lean 4 theorem prover to ensure mathematical correctness of key invariants:
+Lean files are specification sketches; some contain `sorry` placeholders. No completed formal verification of the Rust implementation is claimed. Intended invariants include:
 - Tile indexing and bounds checking
 - Cargo conservation properties
 - Person location invariants
@@ -27,8 +38,8 @@ Keep the original reference checkout beside this repository:
 ```text
 github/
 ├── OpenTTD/        # Original C++ repository
-├── openttd-rust/   # Rust-core specifications and future implementation
-└── lean/           # Lean 4 verification theories
+└── openttd-rust/   # Rust scaffold and specifications
+    └── lean/       # Lean 4 specification sketches
 ```
 
 The reference is a separate Git repository, not a submodule or vendored source tree. [upstream.json](upstream.json) records its origin and the exact commit used for this assessment. Future updates to the reference require an explicit baseline review.

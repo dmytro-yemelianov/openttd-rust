@@ -38,7 +38,7 @@ impl SubAssign for Coord {
 }
 
 /// Simulation speed in tiles per tick
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Copy, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Speed(pub f32);
 
 impl Speed {
@@ -54,6 +54,43 @@ impl Money {
     pub const ZERO: Self = Self(0);
     pub const MAX: Self = Self(i64::MAX);
     pub const MIN: Self = Self(i64::MIN);
+
+    pub fn checked_add(self, other: Self) -> Option<Self> {
+        self.0.checked_add(other.0).map(Self)
+    }
+
+    pub fn checked_sub(self, other: Self) -> Option<Self> {
+        self.0.checked_sub(other.0).map(Self)
+    }
+
+    pub fn checked_mul(self, multiplier: i64) -> Option<Self> {
+        self.0.checked_mul(multiplier).map(Self)
+    }
+
+    pub fn checked_div(self, divisor: i64) -> Option<Self> {
+        if divisor == 0 {
+            None
+        } else {
+            self.0.checked_div(divisor).map(Self)
+        }
+    }
+
+    pub fn saturating_add(self, other: Self) -> Self {
+        Self(self.0.saturating_add(other.0))
+    }
+
+    pub fn saturating_sub(self, other: Self) -> Self {
+        Self(self.0.saturating_sub(other.0))
+    }
+
+    pub fn sub_checked(self, other: Self) -> Result<Self, crate::error::TransportError> {
+        self.checked_sub(other).ok_or_else(|| {
+            crate::error::TransportError::Underflow(format!(
+                "Money underflow: {} - {}",
+                self.0, other.0
+            ))
+        })
+    }
 }
 
 impl Add for Money {
@@ -103,6 +140,31 @@ pub struct CargoAmount(pub u32);
 impl CargoAmount {
     pub const ZERO: Self = Self(0);
     pub const MAX: Self = Self(u32::MAX);
+
+    pub fn checked_add(self, other: Self) -> Option<Self> {
+        self.0.checked_add(other.0).map(Self)
+    }
+
+    pub fn checked_sub(self, other: Self) -> Option<Self> {
+        self.0.checked_sub(other.0).map(Self)
+    }
+
+    pub fn saturating_add(self, other: Self) -> Self {
+        Self(self.0.saturating_add(other.0))
+    }
+
+    pub fn saturating_sub(self, other: Self) -> Self {
+        Self(self.0.saturating_sub(other.0))
+    }
+
+    pub fn sub_checked(self, other: Self) -> Result<Self, crate::error::TransportError> {
+        self.checked_sub(other).ok_or_else(|| {
+            crate::error::TransportError::Underflow(format!(
+                "CargoAmount underflow: {} - {}",
+                self.0, other.0
+            ))
+        })
+    }
 }
 
 impl Add for CargoAmount {
@@ -138,7 +200,7 @@ pub struct Temperature(pub i32); // i32 to allow negative values
 impl Temperature {
     pub const ZERO: Self = Self(0);
     pub const FREEZING: Self = Self(0); // 0.00°C
-    pub const BOILING: Self = Self(100_00); // 100.00°C
+    pub const BOILING: Self = Self(10_000); // 100.00°C
 }
 
 impl Add for Temperature {
@@ -174,6 +236,30 @@ pub struct Ticks(pub u32);
 impl Ticks {
     pub const ZERO: Self = Self(0);
     pub const MAX: Self = Self(u32::MAX);
+
+    pub fn checked_add(self, other: Self) -> Option<Self> {
+        self.0.checked_add(other.0).map(Self)
+    }
+
+    pub fn checked_sub(self, other: Self) -> Option<Self> {
+        self.0.checked_sub(other.0).map(Self)
+    }
+
+    pub fn saturating_add(self, other: Self) -> Self {
+        Self(self.0.saturating_add(other.0))
+    }
+
+    pub fn saturating_sub(self, other: Self) -> Self {
+        Self(self.0.saturating_sub(other.0))
+    }
+
+    pub fn advance_checked(&mut self) -> Result<Self, crate::error::TransportError> {
+        let next = self.0.checked_add(1).ok_or_else(|| {
+            crate::error::TransportError::ArithmeticOverflow("Ticks overflowed u32::MAX".to_string())
+        })?;
+        self.0 = next;
+        Ok(Self(next))
+    }
 }
 
 impl Add for Ticks {

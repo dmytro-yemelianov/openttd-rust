@@ -1,0 +1,103 @@
+{
+  "project": "openttd-rust",
+  "active_task": null,
+  "updated_at": "2026-09-11",
+  "baseline": {
+    "crates_count": 6,
+    "cargo_check": "clean (0 errors, 0 warnings)",
+    "cargo_test": "28 passed, 0 failures, 100% pass rate",
+    "graph_indexed": true,
+    "graph_persisted": ".codebase-memory/graph.db.zst"
+  },
+  "tasks": {
+    "task_01_commands": {
+      "name": "Commands and observable failures",
+      "card": "memory/tasks/01_commands.md",
+      "status": "completed",
+      "blocked_reason": null,
+      "prerequisites": [],
+      "target_crates": [
+        "transport-sim",
+        "transport-api"
+      ]
+    },
+    "task_02_orders": {
+      "name": "Orders and deterministic ticks",
+      "card": "memory/tasks/02_orders.md",
+      "status": "completed",
+      "blocked_reason": null,
+      "prerequisites": [
+        "task_01_commands"
+      ],
+      "target_crates": [
+        "transport-sim",
+        "transport-types"
+      ]
+    },
+    "task_03_validation": {
+      "name": "Validated state and arithmetic",
+      "card": "memory/tasks/03_validation.md",
+      "status": "completed",
+      "blocked_reason": null,
+      "prerequisites": [
+        "task_02_orders"
+      ],
+      "target_crates": [
+        "transport-world",
+        "transport-types"
+      ]
+    },
+    "task_04_snapshots": {
+      "name": "Recoverable snapshots",
+      "card": "memory/tasks/04_snapshots.md",
+      "status": "completed",
+      "blocked_reason": null,
+      "prerequisites": [
+        "task_03_validation"
+      ],
+      "target_crates": [
+        "transport-orm",
+        "transport-sim"
+      ]
+    },
+    "task_05_transport_slice": {
+      "name": "One working transport slice",
+      "card": "memory/tasks/05_transport_slice.md",
+      "status": "completed",
+      "blocked_reason": null,
+      "prerequisites": [
+        "task_04_snapshots"
+      ],
+      "target_crates": [
+        "transport-world",
+        "transport-sim",
+        "transport-people"
+      ]
+    },
+    "task_06_optimization": {
+      "name": "Measure and optimize",
+      "card": "memory/tasks/06_optimization.md",
+      "status": "completed",
+      "blocked_reason": null,
+      "prerequisites": [
+        "task_05_transport_slice"
+      ],
+      "target_crates": [
+        "transport-world",
+        "transport-sim"
+      ]
+    },
+    "task_07_gates": {
+      "name": "Enforce gates and clean warnings",
+      "card": "memory/tasks/07_gates.md",
+      "status": "completed",
+      "blocked_reason": null,
+      "prerequisites": [
+        "task_06_optimization"
+      ],
+      "target_crates": [
+        "all"
+      ]
+    }
+  }
+}

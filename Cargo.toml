@@ -1,11 +1,12 @@
 [workspace]
+resolver = "2"
 members = [
     "crates/transport-types",
     "crates/transport-world",
     "crates/transport-sim",
     "crates/transport-people",
     "crates/transport-api",
-    "crates/transport-orm",  // Optional: for serialization/persistence
+    "crates/transport-orm",
 ]
 
 [workspace.package]
@@ -19,8 +20,6 @@ serde_json = "1.0"
 thiserror = "1.0"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["fmt"] }
-
-[workspace.dev-dependencies]
 pretty_assertions = "1.0"
 proptest = "1.4"
 tempfile = "3.0"
