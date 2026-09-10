@@ -6,6 +6,7 @@ import Transport.TraceEquivalence
 import Transport.RingBuffer
 import Transport.PeepEconomy
 import Transport.Render
+import Transport.Tools
 
 namespace Transport
 

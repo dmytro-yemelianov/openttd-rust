@@ -246,6 +246,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "transport-tools"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "thiserror",
+ "tracing",
+ "transport-api",
+ "transport-people",
+ "transport-render",
+ "transport-sim",
+ "transport-types",
+ "transport-world",
+]
+
+[[package]]
 name = "transport-types"
 version = "0.1.0"
 dependencies = [
