@@ -9,6 +9,7 @@ members = [
     "crates/transport-orm",
     "crates/transport-render",
     "crates/transport-tools",
+    "crates/transport-scenario",
 ]
 
 [workspace.package]
