@@ -91,7 +91,9 @@ pub trait TransportResultExt<T, E> {
     fn transport_err(self, context: impl Into<String>) -> Result<T>;
 }
 
-impl<T, E: std::error::Error + Send + Sync + 'static> TransportResultExt<T, E> for std::result::Result<T, E> {
+impl<T, E: std::error::Error + Send + Sync + 'static> TransportResultExt<T, E>
+    for std::result::Result<T, E>
+{
     fn transport_err(self, context: impl Into<String>) -> Result<T> {
         self.map_err(|e| TransportError::Custom {
             context: context.into(),

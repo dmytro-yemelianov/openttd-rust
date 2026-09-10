@@ -91,10 +91,7 @@ pub enum OrderType {
         conditions: Option<WaitConditions>,
     },
     /// Go to specific coordinate (water/air)
-    GoToTile {
-        x: i16,
-        y: i16,
-    },
+    GoToTile { x: i16, y: i16 },
     /// Wait for specific amount of time
     WaitTime(u16), // ticks
     /// Wait until specific date

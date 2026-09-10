@@ -6,11 +6,11 @@
 //! - Definitions and specifications
 //! - Relationship tracking
 
-pub mod map;
-pub mod entities;
 pub mod definitions;
+pub mod entities;
+pub mod map;
 pub mod relationships;
 
-pub use map::*;
-pub use entities::*;
 pub use definitions::*;
+pub use entities::*;
+pub use map::*;

@@ -5,13 +5,21 @@
 //! - Command processing
 //! - Simulation ticks (movement, loading/unloading, economy, etc.)
 
+pub mod drivers;
+pub mod kernel;
+
+pub use drivers::*;
+pub use kernel::*;
+
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, VecDeque};
-use transport_types::{CompanyID, OrderIndex, VehicleID, StationID, OrderListID, CargoType, EngineID, TileIndex};
-use transport_types::unit::{CargoAmount, Money, Ticks};
 use transport_types::enum_::{OrderType, VehicleState};
+use transport_types::unit::{CargoAmount, Money, Ticks};
+use transport_types::{
+    CargoType, CompanyID, EngineID, OrderIndex, OrderListID, StationID, TileIndex, VehicleID,
+};
 use transport_world::map::{Map, MapSize};
-use transport_world::{entities::*, definitions::*};
+use transport_world::{definitions::*, entities::*};
 
 /// Command queue entry for the simulation agentic loop
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -46,8 +54,13 @@ pub enum CommandSuccess {
     VehiclePurchased(VehicleID),
     OrderListCreated(OrderListID),
     OrderAdded,
-    CargoLoaded { transferred: transport_types::unit::CargoAmount },
-    CargoUnloaded { transferred: transport_types::unit::CargoAmount, revenue: Money },
+    CargoLoaded {
+        transferred: transport_types::unit::CargoAmount,
+    },
+    CargoUnloaded {
+        transferred: transport_types::unit::CargoAmount,
+        revenue: Money,
+    },
     Done,
 }
 
@@ -143,7 +156,10 @@ impl World {
                 transport_types::unit::Speed(10.0),
                 Money(5000), // cost
                 Money(20),   // running cost
-                vec![transport_types::enum_::CargoClass::Bulk, transport_types::enum_::CargoClass::Passenger],
+                vec![
+                    transport_types::enum_::CargoClass::Bulk,
+                    transport_types::enum_::CargoClass::Passenger,
+                ],
                 1930,
                 None,
             ),
@@ -254,8 +270,7 @@ pub enum Command {
         station_id: StationID,
         cargo_type: CargoType,
         amount: transport_types::unit::CargoAmount,
-    }
-    // TODO: more commands (delete, modify, etc.)
+    }, // TODO: more commands (delete, modify, etc.)
 }
 
 impl Command {
@@ -375,26 +390,27 @@ impl Simulator {
                 .checked_add(1)
                 .expect("Execution order sequence exhausted");
         }
-        
+
         // Step 2: Advance all vehicles according to their orders (deterministic order, zero-alloc buffer)
         self.vehicle_order_buffer.clear();
-        self.vehicle_order_buffer.extend(self.world.vehicles.keys().copied());
+        self.vehicle_order_buffer
+            .extend(self.world.vehicles.keys().copied());
         self.vehicle_order_buffer.sort_unstable();
         for i in 0..self.vehicle_order_buffer.len() {
             let vehicle_id = self.vehicle_order_buffer[i];
             self.advance_vehicle_orders(vehicle_id);
         }
-        
+
         // Step 3: Handle cargo loading/unloading at stations (reuses sorted vehicle buffer)
         if let Err(e) = self.handle_cargo_transfer() {
             eprintln!("Cargo transfer error: {e:?}");
         }
-        
+
         // Step 4: Process person boarding/alighting
         if let Err(e) = self.process_person_transport() {
             eprintln!("Person transport error: {e:?}");
         }
-        
+
         // Step 5: Advance tick counter
         self.world.advance_tick();
     }
@@ -403,21 +419,19 @@ impl Simulator {
     /// Unsupported commands and failed commands mutate ZERO world state.
     pub fn process_command_unified(&mut self, command: &Command) -> CommandResult {
         match command {
-            Command::CreateCompany { name, money, color } => {
-                match self.next_company_id_checked() {
-                    Ok(id) => {
-                        let company = Company::new(id, name.clone(), *money, *color);
-                        self.world.companies.insert(id, company);
-                        if self.world.current_company_id == CompanyID::INVALID {
-                            self.world.current_company_id = id;
-                        }
-                        CommandResult::Success(CommandSuccess::CompanyCreated(id))
+            Command::CreateCompany { name, money, color } => match self.next_company_id_checked() {
+                Ok(id) => {
+                    let company = Company::new(id, name.clone(), *money, *color);
+                    self.world.companies.insert(id, company);
+                    if self.world.current_company_id == CompanyID::INVALID {
+                        self.world.current_company_id = id;
                     }
-                    Err(CompanyIdExhausted::Exhausted) => {
-                        CommandResult::Failure(CommandFailure::CompanyIdExhausted)
-                    }
+                    CommandResult::Success(CommandSuccess::CompanyCreated(id))
                 }
-            }
+                Err(CompanyIdExhausted::Exhausted) => {
+                    CommandResult::Failure(CommandFailure::CompanyIdExhausted)
+                }
+            },
             Command::BuildStation {
                 company_id,
                 name,
@@ -469,7 +483,10 @@ impl Simulator {
                     station.goods.push(GoodsEntry::new(*cargo_id));
                 }
                 for t in tiles {
-                    let _ = self.world.map.set_station_at(*t, station_id, Some(*company_id));
+                    let _ = self
+                        .world
+                        .map
+                        .set_station_at(*t, station_id, Some(*company_id));
                     self.world.tile_to_station.insert(*t, station_id);
                 }
                 self.world.stations.insert(station_id, station);
@@ -486,7 +503,9 @@ impl Simulator {
                     return CommandResult::Failure(CommandFailure::CompanyNotFound(*company_id));
                 }
                 if !self.world.order_lists.contains_key(order_list_id) {
-                    return CommandResult::Failure(CommandFailure::OrderListNotFound(*order_list_id));
+                    return CommandResult::Failure(CommandFailure::OrderListNotFound(
+                        *order_list_id,
+                    ));
                 }
                 if !self.world.map.size().is_valid_index(*position) {
                     return CommandResult::Failure(CommandFailure::OutOfBounds(*position));
@@ -543,7 +562,9 @@ impl Simulator {
                 let list = match self.world.order_lists.get_mut(order_list_id) {
                     Some(l) => l,
                     None => {
-                        return CommandResult::Failure(CommandFailure::OrderListNotFound(*order_list_id))
+                        return CommandResult::Failure(CommandFailure::OrderListNotFound(
+                            *order_list_id,
+                        ))
                     }
                 };
                 list.push(order.clone());
@@ -585,12 +606,8 @@ impl Simulator {
                     return CommandResult::Failure(CommandFailure::NoCargoAvailable);
                 }
                 goods.amount.0 -= transfer;
-                if let Some(entry) = vehicle
-                    .cargo
-                    .iter_mut()
-                    .find(|(c, _)| *c == *cargo_type)
-                {
-                    entry.1.0 += transfer;
+                if let Some(entry) = vehicle.cargo.iter_mut().find(|(c, _)| *c == *cargo_type) {
+                    entry.1 .0 += transfer;
                 } else {
                     vehicle.cargo.push((*cargo_type, CargoAmount(transfer)));
                 }
@@ -621,19 +638,15 @@ impl Simulator {
                         "Vehicle is not positioned at station".to_string(),
                     ));
                 }
-                let cargo_entry = match vehicle
-                    .cargo
-                    .iter_mut()
-                    .find(|(c, _)| *c == *cargo_type)
-                {
+                let cargo_entry = match vehicle.cargo.iter_mut().find(|(c, _)| *c == *cargo_type) {
                     Some(e) => e,
                     None => return CommandResult::Failure(CommandFailure::NoCargoAvailable),
                 };
-                let transfer = std::cmp::min(cargo_entry.1.0, amount.0);
+                let transfer = std::cmp::min(cargo_entry.1 .0, amount.0);
                 if transfer == 0 {
                     return CommandResult::Failure(CommandFailure::NoCargoAvailable);
                 }
-                cargo_entry.1.0 -= transfer;
+                cargo_entry.1 .0 -= transfer;
                 let company_id = vehicle.company_id;
                 if let Some(g) = station
                     .goods
@@ -703,7 +716,9 @@ impl Simulator {
         let max_id = self.world.order_lists.keys().map(|id| id.0).max();
         let next_val = match max_id {
             None => 0,
-            Some(v) => v.checked_add(1).ok_or(CommandFailure::OrderListIdExhausted)?,
+            Some(v) => v
+                .checked_add(1)
+                .ok_or(CommandFailure::OrderListIdExhausted)?,
         };
         if next_val == OrderListID::INVALID.0 {
             return Err(CommandFailure::OrderListIdExhausted);
@@ -771,7 +786,10 @@ impl Simulator {
             OrderType::GoToStation { station_id, .. } => {
                 let station_opt = self.world.stations.get(station_id);
                 let (is_at_station, target_tile) = match station_opt {
-                    Some(s) => (s.tiles.contains(&vehicle.position), s.tiles.first().copied()),
+                    Some(s) => (
+                        s.tiles.contains(&vehicle.position),
+                        s.tiles.first().copied(),
+                    ),
                     None => {
                         vehicle.state = VehicleState::Idle;
                         return;
@@ -894,7 +912,7 @@ impl Simulator {
                                     .iter_mut()
                                     .find(|(c, _)| *c == goods.cargo_type)
                                 {
-                                    e.1.0 += transfer;
+                                    e.1 .0 += transfer;
                                 } else {
                                     vehicle
                                         .cargo
@@ -919,7 +937,7 @@ impl Simulator {
 }
 
 /// Discrete single-tile step towards target coordinate within map bounds
-fn step_towards(from: TileIndex, to: TileIndex, map: &Map) -> TileIndex {
+pub fn step_towards(from: TileIndex, to: TileIndex, map: &Map) -> TileIndex {
     let dx = (to.x as i32) - (from.x as i32);
     let dy = (to.y as i32) - (from.y as i32);
     if dx != 0 {
@@ -962,7 +980,9 @@ mod tests {
         assert_eq!(sim.world.stations.len(), 0);
 
         // Queued path
-        let sub_id = sim.enqueue_command(failed_cmd, "test".to_string(), 1).unwrap();
+        let sub_id = sim
+            .enqueue_command(failed_cmd, "test".to_string(), 1)
+            .unwrap();
         sim.tick();
 
         let outcomes: Vec<_> = sim.drain_outcomes().collect();
@@ -988,7 +1008,9 @@ mod tests {
         };
 
         let imm_res = sim_imm.process_command(cmd.clone());
-        let sub_id = sim_queued.enqueue_command(cmd, "test".to_string(), 5).unwrap();
+        let sub_id = sim_queued
+            .enqueue_command(cmd, "test".to_string(), 5)
+            .unwrap();
         sim_queued.tick();
 
         let outcomes: Vec<_> = sim_queued.drain_outcomes().collect();
@@ -1001,7 +1023,10 @@ mod tests {
         let id_imm = sim_imm.world.current_company_id;
         let id_queued = sim_queued.world.current_company_id;
         assert_eq!(id_imm, id_queued);
-        assert_eq!(sim_imm.world.get_company(&id_imm), sim_queued.world.get_company(&id_queued));
+        assert_eq!(
+            sim_imm.world.get_company(&id_imm),
+            sim_queued.world.get_company(&id_queued)
+        );
     }
 
     #[test]
@@ -1028,23 +1053,41 @@ mod tests {
         let mut sim = Simulator::new(MapSize::new(10, 10));
 
         // Submit low priority, high priority, and equal priority
-        let id_low = sim.enqueue_command(
-            Command::CreateCompany { name: "Low".to_string(), money: Money(1), color: 1 },
-            "test".to_string(),
-            1,
-        ).unwrap();
+        let id_low = sim
+            .enqueue_command(
+                Command::CreateCompany {
+                    name: "Low".to_string(),
+                    money: Money(1),
+                    color: 1,
+                },
+                "test".to_string(),
+                1,
+            )
+            .unwrap();
 
-        let id_high = sim.enqueue_command(
-            Command::CreateCompany { name: "High".to_string(), money: Money(2), color: 2 },
-            "test".to_string(),
-            10,
-        ).unwrap();
+        let id_high = sim
+            .enqueue_command(
+                Command::CreateCompany {
+                    name: "High".to_string(),
+                    money: Money(2),
+                    color: 2,
+                },
+                "test".to_string(),
+                10,
+            )
+            .unwrap();
 
-        let id_high_second = sim.enqueue_command(
-            Command::CreateCompany { name: "High2".to_string(), money: Money(3), color: 3 },
-            "test".to_string(),
-            10,
-        ).unwrap();
+        let id_high_second = sim
+            .enqueue_command(
+                Command::CreateCompany {
+                    name: "High2".to_string(),
+                    money: Money(3),
+                    color: 3,
+                },
+                "test".to_string(),
+                10,
+            )
+            .unwrap();
 
         assert_eq!(sim.command_queue[0].submission_id, id_high);
         assert_eq!(sim.command_queue[1].submission_id, id_high_second);
@@ -1069,10 +1112,15 @@ mod tests {
     fn test_outcomes_drain_exactly_once() {
         let mut sim = Simulator::new(MapSize::new(10, 10));
         sim.enqueue_command(
-            Command::CreateCompany { name: "DrainTest".to_string(), money: Money(100), color: 1 },
+            Command::CreateCompany {
+                name: "DrainTest".to_string(),
+                money: Money(100),
+                color: 1,
+            },
             "test".to_string(),
             1,
-        ).unwrap();
+        )
+        .unwrap();
 
         sim.tick();
         let first_drain: Vec<_> = sim.drain_outcomes().collect();
@@ -1098,7 +1146,10 @@ mod tests {
             color: 2,
         });
 
-        assert_eq!(res, CommandResult::Failure(CommandFailure::CompanyIdExhausted));
+        assert_eq!(
+            res,
+            CommandResult::Failure(CommandFailure::CompanyIdExhausted)
+        );
         assert_eq!(sim.world.companies.len(), 1);
     }
 
@@ -1130,10 +1181,9 @@ mod tests {
     fn test_wait_time_order_progression() {
         let mut sim = Simulator::new(MapSize::new(10, 10));
         let list_id = OrderListID(1);
-        sim.world.order_lists.insert(list_id, vec![
-            OrderType::WaitTime(3),
-            OrderType::NoOrder,
-        ]);
+        sim.world
+            .order_lists
+            .insert(list_id, vec![OrderType::WaitTime(3), OrderType::NoOrder]);
 
         let vehicle_id = VehicleID(1);
         let vehicle = Vehicle::new(
@@ -1175,10 +1225,10 @@ mod tests {
         let mut sim = Simulator::new(MapSize::new(10, 10));
         // OrderListID well above legacy 999 threshold
         let list_id = OrderListID(5000);
-        sim.world.order_lists.insert(list_id, vec![
-            OrderType::WaitTime(1),
-            OrderType::WaitTime(1),
-        ]);
+        sim.world.order_lists.insert(
+            list_id,
+            vec![OrderType::WaitTime(1), OrderType::WaitTime(1)],
+        );
 
         let vehicle_id = VehicleID(10000);
         let vehicle = Vehicle::new(
@@ -1206,7 +1256,9 @@ mod tests {
     fn test_deterministic_vehicle_processing_order() {
         let mut sim = Simulator::new(MapSize::new(10, 10));
         let list_id = OrderListID(1);
-        sim.world.order_lists.insert(list_id, vec![OrderType::WaitTime(10)]);
+        sim.world
+            .order_lists
+            .insert(list_id, vec![OrderType::WaitTime(10)]);
 
         // Insert in non-sorted order
         for id in [VehicleID(40), VehicleID(2), VehicleID(15), VehicleID(1)] {
@@ -1269,15 +1321,35 @@ mod tests {
         };
 
         // Station indexing: map and world must agree on station locations
-        assert_eq!(sim.world.map.station_at(TileIndex::new(2, 2)), Some(dock_a_id));
-        assert_eq!(sim.world.map.station_at(TileIndex::new(6, 2)), Some(dock_b_id));
-        assert_eq!(sim.world.get_station_at_tile(&TileIndex::new(2, 2)).map(|s| s.id), Some(dock_a_id));
-        assert_eq!(sim.world.get_station_at_tile(&TileIndex::new(6, 2)).map(|s| s.id), Some(dock_b_id));
+        assert_eq!(
+            sim.world.map.station_at(TileIndex::new(2, 2)),
+            Some(dock_a_id)
+        );
+        assert_eq!(
+            sim.world.map.station_at(TileIndex::new(6, 2)),
+            Some(dock_b_id)
+        );
+        assert_eq!(
+            sim.world
+                .get_station_at_tile(&TileIndex::new(2, 2))
+                .map(|s| s.id),
+            Some(dock_a_id)
+        );
+        assert_eq!(
+            sim.world
+                .get_station_at_tile(&TileIndex::new(6, 2))
+                .map(|s| s.id),
+            Some(dock_b_id)
+        );
 
         // Stock Dock A with 30 units of Grain (CargoType 1)
         let initial_cargo = 30u32;
         let station_a = sim.world.stations.get_mut(&dock_a_id).unwrap();
-        if let Some(goods) = station_a.goods.iter_mut().find(|g| g.cargo_type == CargoType(1)) {
+        if let Some(goods) = station_a
+            .goods
+            .iter_mut()
+            .find(|g| g.cargo_type == CargoType(1))
+        {
             goods.amount = CargoAmount(initial_cargo);
         } else {
             let mut g = GoodsEntry::new(CargoType(1));
@@ -1326,7 +1398,17 @@ mod tests {
         sim.tick();
         let ship = sim.world.vehicles.get(&vehicle_id).unwrap();
         let ship_cargo: u32 = ship.cargo.iter().map(|(_, a)| a.0).sum();
-        let dock_a_waiting = sim.world.stations.get(&dock_a_id).unwrap().goods.iter().find(|g| g.cargo_type == CargoType(1)).unwrap().amount.0;
+        let dock_a_waiting = sim
+            .world
+            .stations
+            .get(&dock_a_id)
+            .unwrap()
+            .goods
+            .iter()
+            .find(|g| g.cargo_type == CargoType(1))
+            .unwrap()
+            .amount
+            .0;
         assert_eq!(ship_cargo, 30);
         assert_eq!(dock_a_waiting, 0);
 
@@ -1344,18 +1426,51 @@ mod tests {
         sim.tick();
 
         // 7. Verify delivery, company revenue, and cargo conservation
-        let dock_b_delivered = sim.world.stations.get(&dock_b_id).unwrap().goods.iter().find(|g| g.cargo_type == CargoType(1)).map(|g| g.delivered_since_last_visit.0).unwrap_or(0);
-        assert_eq!(dock_b_delivered, 30, "All 30 units must be delivered at Dock B");
+        let dock_b_delivered = sim
+            .world
+            .stations
+            .get(&dock_b_id)
+            .unwrap()
+            .goods
+            .iter()
+            .find(|g| g.cargo_type == CargoType(1))
+            .map(|g| g.delivered_since_last_visit.0)
+            .unwrap_or(0);
+        assert_eq!(
+            dock_b_delivered, 30,
+            "All 30 units must be delivered at Dock B"
+        );
 
         // Company must have received 30 * 10 = $300 revenue
         let final_balance = sim.world.companies.get(&company_id).unwrap().money;
         assert_eq!(final_balance.0, balance_after_ship.0 + 300);
 
         // Cargo Conservation Invariant: total cargo units never created or destroyed
-        let waiting_total: u32 = sim.world.stations.values().flat_map(|s| &s.goods).map(|g| g.amount.0).sum();
-        let on_vehicle_total: u32 = sim.world.vehicles.values().flat_map(|v| &v.cargo).map(|(_, a)| a.0).sum();
-        let delivered_total: u32 = sim.world.stations.values().flat_map(|s| &s.goods).map(|g| g.delivered_since_last_visit.0).sum();
-        assert_eq!(waiting_total + on_vehicle_total + delivered_total, initial_cargo);
+        let waiting_total: u32 = sim
+            .world
+            .stations
+            .values()
+            .flat_map(|s| &s.goods)
+            .map(|g| g.amount.0)
+            .sum();
+        let on_vehicle_total: u32 = sim
+            .world
+            .vehicles
+            .values()
+            .flat_map(|v| &v.cargo)
+            .map(|(_, a)| a.0)
+            .sum();
+        let delivered_total: u32 = sim
+            .world
+            .stations
+            .values()
+            .flat_map(|s| &s.goods)
+            .map(|g| g.delivered_since_last_visit.0)
+            .sum();
+        assert_eq!(
+            waiting_total + on_vehicle_total + delivered_total,
+            initial_cargo
+        );
     }
 
     #[test]
@@ -1419,6 +1534,9 @@ mod tests {
             })
         );
         assert_eq!(sim.world.stations.len(), 0);
-        assert_eq!(sim.world.companies.get(&company_id).unwrap().money, Money(500));
+        assert_eq!(
+            sim.world.companies.get(&company_id).unwrap().money,
+            Money(500)
+        );
     }
 }

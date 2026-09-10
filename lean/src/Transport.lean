@@ -69,4 +69,43 @@ theorem nextOrderIndex_lt (currentIdx : Nat) (orderCount : Nat) (h : 0 < orderCo
   dsimp [nextOrderIndex]
   exact Nat.mod_lt _ h
 
+/-! ## 5. Microkernel Phase Partitioning & Monotonic Ticks -/
+
+inductive Phase where
+  | ingress
+  | solvers
+  | drivers
+  | commit
+  | egress
+  deriving DecidableEq, Repr
+
+structure KernelState where
+  tick : Nat
+  stagedIntents : Nat
+  deriving DecidableEq, Repr
+
+def stepPhase (p : Phase) (s : KernelState) : KernelState :=
+  match p with
+  | Phase.ingress => s
+  | Phase.solvers => s
+  | Phase.drivers => s
+  | Phase.commit => ⟨s.tick, 0⟩
+  | Phase.egress => ⟨s.tick + 1, 0⟩
+
+def runTickCycle (s : KernelState) : KernelState :=
+  stepPhase Phase.egress (
+    stepPhase Phase.commit (
+      stepPhase Phase.drivers (
+        stepPhase Phase.solvers (
+          stepPhase Phase.ingress s))))
+
+theorem tick_cycle_strictly_monotonic (s : KernelState) :
+    s.tick < (runTickCycle s).tick := by
+  dsimp [runTickCycle, stepPhase]
+  exact Nat.lt_succ_self s.tick
+
+theorem tick_cycle_deterministic (s1 s2 : KernelState) (h : s1 = s2) :
+    runTickCycle s1 = runTickCycle s2 := by
+  rw [h]
+
 end Transport

@@ -1,7 +1,7 @@
 use serde::{Deserialize, Serialize};
 use std::fmt;
-use transport_types::{StationID, TileIndex};
 use transport_types::enum_::TileKind;
+use transport_types::{StationID, TileIndex};
 
 /// Errors that can occur during Map construction and validation
 #[derive(Debug, Clone, Eq, PartialEq, thiserror::Error)]
@@ -247,7 +247,10 @@ impl Map {
     /// Check if tile is navigable by water vehicles (water or water station/dock)
     pub fn is_navigable_water(&self, tile: TileIndex) -> bool {
         self.get(tile)
-            .map(|t| t.is_water() || (matches!(t.base.kind, TileKind::Station) && t.base.water_height > 0))
+            .map(|t| {
+                t.is_water()
+                    || (matches!(t.base.kind, TileKind::Station) && t.base.water_height > 0)
+            })
             .unwrap_or(false)
     }
 
@@ -259,7 +262,11 @@ impl Map {
         let x = i32::from(tile.x);
         let y = i32::from(tile.y);
         [
-            if y > 0 { Some(TileIndex::new(x as u16, (y - 1) as u16)) } else { None }, // North
+            if y > 0 {
+                Some(TileIndex::new(x as u16, (y - 1) as u16))
+            } else {
+                None
+            }, // North
             if x < i32::from(self.size.width) - 1 {
                 Some(TileIndex::new((x + 1) as u16, y as u16))
             } else {
@@ -301,10 +308,10 @@ mod tests {
     fn test_tile_access() {
         let mut map = Map::new(MapSize::new(5, 5));
         let tile = TileIndex::new(2, 3);
-        
+
         // Get should return Some for valid tile
         assert!(map.get(tile).is_some());
-        
+
         // Set a tile
         let new_tile = Tile {
             base: TileBase {
@@ -316,11 +323,11 @@ mod tests {
             extension: TileExtension { data: 0x12345678 },
         };
         assert!(map.set(tile, new_tile).is_ok());
-        
+
         // Check it was set
         assert_eq!(map.get(tile).unwrap().base.kind, TileKind::Water);
         assert_eq!(map.get(tile).unwrap().extension.data, 0x12345678);
-        
+
         // Out of bounds should return None
         assert!(map.get(TileIndex::new(10, 10)).is_none());
         assert!(map.set(TileIndex::new(10, 10), Tile::new_empty()).is_err());
@@ -330,15 +337,24 @@ mod tests {
     fn test_map_validation_rejects_zero_dimensions() {
         assert_eq!(
             Map::try_new(MapSize::new(0, 10)),
-            Err(MapError::ZeroDimension { width: 0, height: 10 })
+            Err(MapError::ZeroDimension {
+                width: 0,
+                height: 10
+            })
         );
         assert_eq!(
             Map::try_new(MapSize::new(10, 0)),
-            Err(MapError::ZeroDimension { width: 10, height: 0 })
+            Err(MapError::ZeroDimension {
+                width: 10,
+                height: 0
+            })
         );
         assert_eq!(
             Map::try_new(MapSize::new(0, 0)),
-            Err(MapError::ZeroDimension { width: 0, height: 0 })
+            Err(MapError::ZeroDimension {
+                width: 0,
+                height: 0
+            })
         );
     }
 

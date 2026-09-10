@@ -1,5 +1,5 @@
 use serde::{Deserialize, Serialize};
-use std::ops::{Add, Sub, Mul, Div, AddAssign, SubAssign};
+use std::ops::{Add, AddAssign, Div, Mul, Sub, SubAssign};
 
 /// Map coordinate in tiles
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash, Serialize, Deserialize)]
@@ -255,7 +255,9 @@ impl Ticks {
 
     pub fn advance_checked(&mut self) -> Result<Self, crate::error::TransportError> {
         let next = self.0.checked_add(1).ok_or_else(|| {
-            crate::error::TransportError::ArithmeticOverflow("Ticks overflowed u32::MAX".to_string())
+            crate::error::TransportError::ArithmeticOverflow(
+                "Ticks overflowed u32::MAX".to_string(),
+            )
         })?;
         self.0 = next;
         Ok(Self(next))

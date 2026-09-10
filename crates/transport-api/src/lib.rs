@@ -1,5 +1,5 @@
-use transport_types::{VehicleID, StationID, CargoType, PersonID, Ticks, TileIndex};
 use serde::{Deserialize, Serialize};
+use transport_types::{CargoType, PersonID, StationID, Ticks, TileIndex, VehicleID};
 
 /// Events that can be emitted by the simulation
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -42,10 +42,7 @@ pub enum Event {
         tick: Ticks,
     },
     /// A boarding request has been denied
-    BoardingRequestDenied {
-        request_id: u64,
-        tick: Ticks,
-    },
+    BoardingRequestDenied { request_id: u64, tick: Ticks },
     /// A person has boarded a vehicle
     PersonBoarded {
         person_id: PersonID,
@@ -57,6 +54,5 @@ pub enum Event {
         person_id: PersonID,
         vehicle_id: VehicleID,
         tick: Ticks,
-    }
-    // TODO: more events (journey started, assignment completed, etc.)
+    }, // TODO: more events (journey started, assignment completed, etc.)
 }

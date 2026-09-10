@@ -147,10 +147,7 @@ pub fn load_people<P: AsRef<Path>>(path: P) -> Result<PeopleSimulator> {
 }
 
 /// Save a versioned snapshot envelope using atomic generational persistence
-pub fn save_snapshot_envelope<P: AsRef<Path>>(
-    envelope: &SnapshotEnvelope,
-    path: P,
-) -> Result<()> {
+pub fn save_snapshot_envelope<P: AsRef<Path>>(envelope: &SnapshotEnvelope, path: P) -> Result<()> {
     validate_snapshot(envelope)?;
 
     let target_path = resolve_snapshot_path(path);
@@ -263,9 +260,7 @@ pub fn save_simulator_snapshot<P: AsRef<Path>>(
 }
 
 /// Load a simulator and people state from a recoverable snapshot
-pub fn load_simulator_snapshot<P: AsRef<Path>>(
-    path: P,
-) -> Result<(Simulator, PeopleSimulator)> {
+pub fn load_simulator_snapshot<P: AsRef<Path>>(path: P) -> Result<(Simulator, PeopleSimulator)> {
     let envelope = load_snapshot_envelope(path)?;
     Ok(envelope.restore_simulator())
 }
@@ -379,7 +374,9 @@ pub fn validate_snapshot(envelope: &SnapshotEnvelope) -> Result<()> {
             )));
         }
         match &person.current_location {
-            Location::AtLocation { tile_id: Some(tile) } => {
+            Location::AtLocation {
+                tile_id: Some(tile),
+            } => {
                 if !envelope.world.map.size().is_valid_index(*tile) {
                     return Err(Error::Validation(format!(
                         "Person {id:?} at out-of-bounds tile {tile:?}"
@@ -450,7 +447,8 @@ mod tests {
     use transport_world::map::MapSize;
 
     fn temp_test_dir(name: &str) -> PathBuf {
-        let dir = std::env::temp_dir().join(format!("openttd_test_{}_{}", name, std::process::id()));
+        let dir =
+            std::env::temp_dir().join(format!("openttd_test_{}_{}", name, std::process::id()));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir
@@ -490,8 +488,7 @@ mod tests {
         assert_eq!(sim_restored.world.tick.0, 50);
 
         save_simulator_snapshot(&sim_restored, &people, &save_path).unwrap();
-        let (mut reloaded_sim, reloaded_people) =
-            load_simulator_snapshot(&save_path).unwrap();
+        let (mut reloaded_sim, reloaded_people) = load_simulator_snapshot(&save_path).unwrap();
 
         assert_eq!(reloaded_sim.world.tick.0, 50);
         assert_eq!(reloaded_people, people);
@@ -663,7 +660,9 @@ mod tests {
 
         // Verify index before save
         assert_eq!(
-            sim.world.get_station_at_tile(&TileIndex::new(3, 4)).map(|s| s.id),
+            sim.world
+                .get_station_at_tile(&TileIndex::new(3, 4))
+                .map(|s| s.id),
             Some(StationID(42))
         );
 

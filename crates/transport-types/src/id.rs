@@ -3,7 +3,7 @@ use std::cmp::{Ord, PartialOrd};
 use std::fmt;
 
 /// A strongly-typed identifier for transport simulation entities.
-/// 
+///
 /// Each ID type is a newtype wrapper around an integer to prevent
 /// mixing different ID types while maintaining performance.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
@@ -86,16 +86,21 @@ impl TileIndex {
     }
 
     pub const fn max_value() -> Self {
-        Self { x: u16::MAX, y: u16::MAX }
+        Self {
+            x: u16::MAX,
+            y: u16::MAX,
+        }
     }
-    pub const INVALID: Self = Self { x: u16::MAX, y: u16::MAX };
+    pub const INVALID: Self = Self {
+        x: u16::MAX,
+        y: u16::MAX,
+    };
 }
 
 impl fmt::Display for TileIndex {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "({},{})", self.x, self.y)
     }
-
 }
 
 /// Extension trait for checking ID validity
