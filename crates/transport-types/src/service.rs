@@ -9,6 +9,7 @@ pub enum ServiceId {
     Economy,
     Pathfinding,
     Storage,
+    Api,
     Custom(u16),
 }
 

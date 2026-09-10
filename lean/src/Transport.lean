@@ -3,6 +3,7 @@ import Transport.PersonLocation
 import Transport.PathfindingBudget
 import Transport.JournalIntegrity
 import Transport.TraceEquivalence
+import Transport.RingBuffer
 
 namespace Transport
 

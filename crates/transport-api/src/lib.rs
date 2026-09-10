@@ -1,8 +1,16 @@
+pub mod driver;
+pub mod ingress;
+pub mod ring;
+
+pub use driver::ApiSubsystemDriver;
+pub use ingress::{ClientCommand, CommandQueue, MAX_INGRESS_PER_TICK};
+pub use ring::{EventRingBuffer, ReadResult, RingConsumer};
+
 use serde::{Deserialize, Serialize};
 use transport_types::{CargoType, PersonID, StationID, Ticks, TileIndex, VehicleID};
 
 /// Events that can be emitted by the simulation
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum Event {
     /// A vehicle has moved to a new tile
     VehicleMoved {
