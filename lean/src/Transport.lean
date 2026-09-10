@@ -8,6 +8,7 @@ import Transport.PeepEconomy
 import Transport.Render
 import Transport.Tools
 import Transport.Scenario
+import Transport.Dashboard
 
 namespace Transport
 

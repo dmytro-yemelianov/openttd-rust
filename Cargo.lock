@@ -211,6 +211,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "transport-dashboard"
+version = "0.1.0"
+dependencies = [
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "transport-api",
+ "transport-people",
+ "transport-sim",
+ "transport-types",
+ "transport-world",
+]
+
+[[package]]
 name = "transport-orm"
 version = "0.1.0"
 dependencies = [
