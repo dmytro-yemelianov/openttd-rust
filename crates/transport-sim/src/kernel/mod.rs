@@ -169,6 +169,14 @@ impl Microkernel {
                                     vehicle.cargo.push((*cargo_type, to_load));
                                 }
                             }
+                            self.event_buffer.push(KernelEvent::CargoTransferred {
+                                vehicle_id: *vehicle_id,
+                                station_id: *station_id,
+                                cargo_type: *cargo_type,
+                                amount: to_load,
+                                is_load: true,
+                                tick: self.world.tick,
+                            });
                         }
                     } else {
                         // Vehicle -> Station
@@ -207,6 +215,14 @@ impl Microkernel {
                                     transport_types::Money(to_unload.0 as i64 * 10),
                                 );
                             }
+                            self.event_buffer.push(KernelEvent::CargoTransferred {
+                                vehicle_id: *vehicle_id,
+                                station_id: *station_id,
+                                cargo_type: *cargo_type,
+                                amount: to_unload,
+                                is_load: false,
+                                tick: self.world.tick,
+                            });
                         }
                     }
                 }

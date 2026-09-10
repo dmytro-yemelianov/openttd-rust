@@ -81,6 +81,45 @@ theorem divergence_of_identical_traces (t : List CompatibleSlice) :
     dsimp [findFirstDivergence]
     simp [ih]
 
+/-- Theorem: Divergence Completeness.
+    If the divergence detector reports no divergence, the traces are strictly identical. -/
+theorem divergence_completeness (t1 t2 : List CompatibleSlice) :
+    findFirstDivergence t1 t2 = none → t1 = t2 := by
+  induction t1 generalizing t2 with
+  | nil =>
+    intro h
+    cases t2 with
+    | nil => rfl
+    | cons s2 rest2 =>
+      dsimp [findFirstDivergence] at h
+      contradiction
+  | cons s1 rest1 ih =>
+    intro h
+    cases t2 with
+    | nil =>
+      dsimp [findFirstDivergence] at h
+      contradiction
+    | cons s2 rest2 =>
+      dsimp [findFirstDivergence] at h
+      split at h
+      · rename_i heq
+        have h_rest : (findFirstDivergence rest1 rest2).map (· + 1) = none := h
+        cases h_opt : findFirstDivergence rest1 rest2 with
+        | none =>
+          have h_rec := ih rest2 h_opt
+          rw [heq, h_rec]
+        | some n =>
+          rw [h_opt] at h_rest
+          dsimp at h_rest
+          contradiction
+      · contradiction
+
+/-- Theorem: Trace Equivalence Characterization (Soundness & Completeness).
+    Two traces have zero divergence if and only if they are identical. -/
+theorem divergence_iff_eq (t1 t2 : List CompatibleSlice) :
+    findFirstDivergence t1 t2 = none ↔ t1 = t2 :=
+  ⟨divergence_completeness t1 t2, fun h => h ▸ divergence_of_identical_traces t1⟩
+
 /-- Theorem: First Divergence Soundness.
     If traces differ at the head, divergence is pinpointed at index 0. -/
 theorem divergence_at_head (s1 s2 : CompatibleSlice) (t1 t2 : List CompatibleSlice)

@@ -6,8 +6,8 @@ use transport_api::Event;
 use transport_sim::kernel::Microkernel;
 use transport_sim::Command;
 use transport_types::{
-    CapabilityToken, CargoAmount, CargoType, CompanyID, Money, StationID, Ticks, TileIndex,
-    VehicleID,
+    CapabilityToken, CargoAmount, CargoType, CompanyID, EngineID, Money, OrderListID, StationID,
+    Ticks, TileIndex, VehicleID,
 };
 use transport_world::map::MapSize;
 
@@ -211,13 +211,136 @@ fn test_api_driver_microkernel_integration() {
     );
 
     kernel.tick().unwrap();
-
     assert_eq!(kernel.world.stations.len(), 1);
-    let station = kernel.world.stations.get(&StationID(1)).unwrap();
-    assert_eq!(station.name, "Central Terminal");
 
-    // Check consumer read
-    let (events, _) = consumer.drain_available();
-    // Kernel emits events when vehicles or cargo move; here we verified station creation
-    assert!(events.is_empty() || !events.is_empty());
+    // 3. Register MovementDriver and create a vehicle with an order to test live event emission
+    kernel.register_driver(transport_sim::drivers::MovementDriver::new());
+
+    let orders_id = OrderListID(1);
+    kernel.world.order_lists.insert(
+        orders_id,
+        vec![transport_types::enum_::OrderType::GoToStation {
+            station_id: StationID(1),
+            conditions: None,
+        }],
+    );
+
+    command_queue.submit(
+        4,
+        CompanyID(1),
+        Command::PurchaseVehicle {
+            company_id: CompanyID(1),
+            engine_id: EngineID(1),
+            kind: transport_types::enum_::VehicleKind::Ship,
+            position: TileIndex::new(3, 5),
+            order_list_id: orders_id,
+        },
+        CapabilityToken::Company(CompanyID(1)),
+    );
+
+    // In this tick, PurchaseVehicle executes
+    kernel.tick().unwrap();
+    assert_eq!(kernel.world.vehicles.len(), 1);
+
+    // In the next tick, MovementDriver moves the ship from (3,5) to (4,5) towards station (5,5)
+    kernel.tick().unwrap();
+
+    // Check consumer read: must observe both VehicleMoved events in exact chronological order!
+    let (events, dropped) = consumer.drain_available();
+    assert_eq!(dropped, 0);
+    assert_eq!(events.len(), 2, "Expected 2 vehicle movement events across 2 ticks");
+
+    match &*events[0] {
+        Event::VehicleMoved {
+            vehicle_id,
+            old_tile,
+            new_tile,
+            ..
+        } => {
+            assert_eq!(*vehicle_id, VehicleID(1));
+            assert_eq!(*old_tile, TileIndex::new(3, 5));
+            assert_eq!(*new_tile, TileIndex::new(4, 5));
+        }
+        _ => panic!("Expected VehicleMoved in event 0"),
+    }
+
+    match &*events[1] {
+        Event::VehicleMoved {
+            vehicle_id,
+            old_tile,
+            new_tile,
+            ..
+        } => {
+            assert_eq!(*vehicle_id, VehicleID(1));
+            assert_eq!(*old_tile, TileIndex::new(4, 5));
+            assert_eq!(*new_tile, TileIndex::new(5, 5));
+        }
+        _ => panic!("Expected VehicleMoved in event 1"),
+    }
+}
+
+#[test]
+fn test_command_ingress_exceeding_tick_capacity() {
+    let queue = CommandQueue::new();
+
+    // Submit 300 commands
+    for i in 1..=300 {
+        queue.submit(
+            i,
+            CompanyID(1),
+            Command::CreateOrderList {},
+            CapabilityToken::Company(CompanyID(1)),
+        );
+    }
+
+    assert_eq!(queue.pending_count(), 300);
+
+    // Tick 1: drains exactly MAX_INGRESS_PER_TICK (256)
+    let batch1 = queue.drain_for_tick();
+    assert_eq!(batch1.len(), 256);
+    assert_eq!(queue.pending_count(), 44);
+
+    // Verify ordering in batch 1
+    assert_eq!(batch1.first().unwrap().sequence, 1);
+    assert_eq!(batch1.last().unwrap().sequence, 256);
+
+    // Tick 2: drains remaining 44
+    let batch2 = queue.drain_for_tick();
+    assert_eq!(batch2.len(), 44);
+    assert_eq!(queue.pending_count(), 0);
+
+    assert_eq!(batch2.first().unwrap().sequence, 257);
+    assert_eq!(batch2.last().unwrap().sequence, 300);
+}
+
+#[test]
+fn test_multi_consumer_independent_rates() {
+    let ring = Arc::new(EventRingBuffer::new(8));
+
+    let mut fast_consumer = ring.consumer();
+    let mut slow_consumer = ring.consumer();
+
+    // Push 20 events
+    for i in 0..20 {
+        ring.push(Event::CargoLoaded {
+            vehicle_id: VehicleID(1),
+            station_id: StationID(1),
+            cargo_type: CargoType(1),
+            amount: CargoAmount(i * 10),
+            tick: Ticks(i),
+        });
+
+        // Fast consumer drains on every push: 0 drops
+        let (drained, dropped) = fast_consumer.drain_available();
+        assert_eq!(dropped, 0);
+        assert_eq!(drained.len(), 1);
+    }
+
+    // Slow consumer only drains at the end: buffer size is 8, so 20 - 8 = 12 dropped
+    let (drained, dropped) = slow_consumer.drain_available();
+    assert_eq!(dropped, 12);
+    assert_eq!(drained.len(), 8);
+
+    // Verify fast consumer was unaffected by slow consumer
+    assert_eq!(fast_consumer.pop(), ReadResult::Empty);
 }

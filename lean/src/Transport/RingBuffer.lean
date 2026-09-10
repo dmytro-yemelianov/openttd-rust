@@ -58,17 +58,35 @@ theorem resync_tail_valid (cfg : RingConfig) (head : Nat) (h_head : cfg.capacity
   dsimp [resyncTail]
   exact Nat.sub_sub_self h_head
 
-/-- Theorem: Readable items in non-lagged state never exceed capacity. -/
-theorem unread_le_capacity (cfg : RingConfig) (st : CursorState)
-    (h_not_lag : st.head - st.tail ≤ cfg.capacity) :
-    st.head - st.tail ≤ cfg.capacity :=
-  h_not_lag
+/-- Theorem: Operational Loss Conservation.
+    Whenever evaluateRead returns a lagged outcome, the reported dropped items
+    and retained capacity sum exactly to the sequence difference between head and tail. -/
+theorem evaluate_lagged_conservation (cfg : RingConfig) (st : CursorState) (d r : Nat)
+    (h : evaluateRead cfg st = ReadOutcome.lagged d r) :
+    d + r = st.head - st.tail := by
+  dsimp [evaluateRead] at h
+  split at h
+  · contradiction
+  · split at h
+    · contradiction
+    · injection h with hd hr
+      rw [← hd, ← hr]
+      have h_le : cfg.capacity ≤ st.head - st.tail := by omega
+      exact Nat.sub_add_cancel h_le
 
-/-- Theorem: Monotonicity of cursor advancement.
-    Advancing the consumer tail cursor by 1 preserves tail ≤ head
-    whenever unread items were available. -/
-theorem tail_advance_monotone (st : CursorState) (h : st.tail < st.head) :
-    st.tail + 1 ≤ st.head :=
-  h
+/-- Theorem: Resync Strictly Advances Lagged Tail.
+    When a consumer lags, resynchronizing the tail strictly advances it past the old tail. -/
+theorem resync_tail_advances_monotone (cfg : RingConfig) (st : CursorState)
+    (h_lag : cfg.capacity < st.head - st.tail) :
+    st.tail < resyncTail cfg st.head := by
+  dsimp [resyncTail]
+  omega
+
+/-- Theorem: Resync Never Exceeds Head.
+    Resynchronizing the tail with positive capacity never places the tail ahead of head. -/
+theorem resync_tail_le_head (cfg : RingConfig) (head : Nat) :
+    resyncTail cfg head ≤ head := by
+  dsimp [resyncTail]
+  exact Nat.sub_le head cfg.capacity
 
 end Transport

@@ -130,6 +130,15 @@ impl MovementDriver {
                             to_tile: next_pos,
                         },
                     );
+                    ctx.stage_intent(
+                        CapabilityToken::Company(company_id),
+                        KernelIntent::EmitEvent(crate::kernel::KernelEvent::VehicleMoved {
+                            vehicle_id,
+                            old_tile: vehicle_pos,
+                            new_tile: next_pos,
+                            tick: ctx.tick,
+                        }),
+                    );
                 }
             }
             _ => {}
