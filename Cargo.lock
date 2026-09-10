@@ -211,6 +211,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "transport-cli"
+version = "0.1.0"
+dependencies = [
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "thiserror",
+ "transport-api",
+ "transport-dashboard",
+ "transport-people",
+ "transport-render",
+ "transport-scenario",
+ "transport-sim",
+ "transport-tools",
+ "transport-types",
+ "transport-world",
+]
+
+[[package]]
 name = "transport-dashboard"
 version = "0.1.0"
 dependencies = [
@@ -313,6 +332,23 @@ dependencies = [
  "serde",
  "serde_json",
  "thiserror",
+]
+
+[[package]]
+name = "transport-wasm"
+version = "0.1.0"
+dependencies = [
+ "pretty_assertions",
+ "serde",
+ "serde_json",
+ "transport-api",
+ "transport-dashboard",
+ "transport-render",
+ "transport-scenario",
+ "transport-sim",
+ "transport-tools",
+ "transport-types",
+ "transport-world",
 ]
 
 [[package]]

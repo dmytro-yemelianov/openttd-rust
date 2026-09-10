@@ -1,4 +1,4 @@
-name: Rust
+name: Continuous Integration
 
 on:
   push:
@@ -7,13 +7,33 @@ on:
     branches: [ main ]
 
 jobs:
-  build:
+  rust-checks:
+    name: Rust Compilation, Clippy & Tests
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
     - name: Install Rust toolchain
       uses: dtolnay/rust-toolchain@stable
+      with:
+        components: clippy
+    - name: Cargo check
+      run: cargo check --workspace --locked
     - name: Cargo clippy
       run: cargo clippy --workspace --locked --all-targets -- -D warnings
     - name: Cargo test
       run: cargo test --workspace --locked
+
+  lean-verification:
+    name: Lean 4 Formal Verification
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    - name: Install elan (Lean 4 version manager)
+      run: |
+        curl -sSf https://raw.githubusercontent.com/leanprover/elan/master/elan-init.sh | sh -s -- -y --default-toolchain leanprover/lean4:v4.30.0
+        echo "$HOME/.elan/bin" >> $GITHUB_PATH
+    - name: Verify Lean 4 installation
+      run: lean --version
+    - name: Build Lean proofs
+      working-directory: lean
+      run: lake build

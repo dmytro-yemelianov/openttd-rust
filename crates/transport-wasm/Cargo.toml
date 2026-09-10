@@ -1,0 +1,23 @@
+[package]
+name = "transport-wasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+transport-types = { path = "../transport-types" }
+transport-world = { path = "../transport-world" }
+transport-sim = { path = "../transport-sim" }
+transport-render = { path = "../transport-render" }
+transport-tools = { path = "../transport-tools" }
+transport-scenario = { path = "../transport-scenario" }
+transport-dashboard = { path = "../transport-dashboard" }
+transport-api = { path = "../transport-api" }
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+[dev-dependencies]
+pretty_assertions = { workspace = true }

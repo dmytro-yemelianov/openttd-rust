@@ -218,3 +218,23 @@ fn test_end_to_end_scene_builder_render() {
     assert_eq!(backend.frame_count, 1);
     assert!(backend.sprite_count() >= builder.items.len());
 }
+
+#[test]
+fn test_software_framebuffer_ppm_and_bmp() {
+    use transport_render::SoftwareFramebuffer;
+
+    let mut fb = SoftwareFramebuffer::new(64, 48);
+    assert_eq!(fb.pixels.len(), 64 * 48);
+
+    // Draw background and diamond
+    fb.begin_frame(64, 48, Color::BLUE);
+    fb.draw_isometric_diamond(32, 24, 16, 8, Color::GREEN);
+
+    let ppm = fb.to_ppm();
+    assert!(ppm.starts_with(b"P6\n64 48\n255\n"));
+    assert_eq!(ppm.len(), "P6\n64 48\n255\n".len() + 64 * 48 * 3);
+
+    let bmp = fb.to_bmp();
+    assert!(bmp.starts_with(b"BM"));
+    assert_eq!(bmp.len(), 54 + (64 * 3) * 48);
+}

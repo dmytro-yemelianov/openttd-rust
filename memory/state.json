@@ -3,9 +3,9 @@
   "active_task": null,
   "updated_at": "2026-09-11",
   "baseline": {
-    "crates_count": 6,
+    "crates_count": 12,
     "cargo_check": "clean (0 errors, 0 warnings)",
-    "cargo_test": "31 passed, 0 failures, 100% pass rate",
+    "cargo_test": "78 passed, 0 failures, 100% pass rate",
     "graph_indexed": true,
     "graph_persisted": ".codebase-memory/graph.db.zst"
   },
@@ -97,6 +97,62 @@
       ],
       "target_crates": [
         "all"
+      ]
+    },
+    "task_08_presentation": {
+      "name": "Agnostic presentation and rendering layer",
+      "status": "completed",
+      "blocked_reason": null,
+      "prerequisites": [
+        "task_07_gates"
+      ],
+      "target_crates": [
+        "transport-render"
+      ]
+    },
+    "task_09_tools": {
+      "name": "Agnostic interaction controller and dry-run validator",
+      "status": "completed",
+      "blocked_reason": null,
+      "prerequisites": [
+        "task_08_presentation"
+      ],
+      "target_crates": [
+        "transport-tools"
+      ]
+    },
+    "task_10_scenario": {
+      "name": "Procedural map generator and scenario engine",
+      "status": "completed",
+      "blocked_reason": null,
+      "prerequisites": [
+        "task_09_tools"
+      ],
+      "target_crates": [
+        "transport-scenario"
+      ]
+    },
+    "task_11_dashboard": {
+      "name": "Hierarchical telemetry and financial ledger",
+      "status": "completed",
+      "blocked_reason": null,
+      "prerequisites": [
+        "task_10_scenario"
+      ],
+      "target_crates": [
+        "transport-dashboard"
+      ]
+    },
+    "task_12_cli_wasm": {
+      "name": "Interactive CLI runner and WebAssembly canvas host",
+      "status": "completed",
+      "blocked_reason": null,
+      "prerequisites": [
+        "task_11_dashboard"
+      ],
+      "target_crates": [
+        "transport-cli",
+        "transport-wasm"
       ]
     }
   }

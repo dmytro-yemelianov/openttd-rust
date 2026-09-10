@@ -12,9 +12,11 @@ pub mod camera;
 pub mod depth;
 pub mod interpolator;
 pub mod scene;
+pub mod software;
 
 pub use backend::*;
 pub use camera::*;
 pub use depth::*;
 pub use interpolator::*;
 pub use scene::*;
+pub use software::*;

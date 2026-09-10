@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>OpenTTD-Rust | Agnostic Presentation & Canvas Host</title>
+  <style>
+    :root {
+      --bg-dark: #0f141c;
+      --card-bg: #182232;
+      --border-color: #2b3a4f;
+      --text-main: #e2e8f0;
+      --text-dim: #94a3b8;
+      --accent: #38bdf8;
+      --accent-green: #4ade80;
+      --accent-orange: #fb923c;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      overflow: hidden;
+    }
+
+    header {
+      background: var(--card-bg);
+      border-bottom: 1px solid var(--border-color);
+      padding: 12px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .title-area h1 { font-size: 1.25rem; font-weight: 700; color: #fff; }
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(56, 189, 248, 0.15);
+      color: var(--accent);
+      margin-left: 8px;
+    }
+
+    main {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    .viewport-panel {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      background: #090d13;
+    }
+
+    #gameCanvas {
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+      cursor: crosshair;
+    }
+
+    .canvas-overlay {
+      position: absolute;
+      top: 16px;
+      left: 16px;
+      background: rgba(24, 34, 50, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--border-color);
+      padding: 10px 16px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      pointer-events: none;
+    }
+
+    .sidebar {
+      width: 380px;
+      background: var(--card-bg);
+      border-left: 1px solid var(--border-color);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+      padding: 16px;
+      overflow-y: auto;
+    }
+
+    .card {
+      background: rgba(15, 20, 28, 0.6);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 14px;
+    }
+
+    .card h2 {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: var(--accent);
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.85rem;
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .metric-row:last-child { border-bottom: none; }
+    .metric-val { font-weight: 600; color: #fff; font-family: monospace; }
+
+    .controls-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 14px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    button:hover { background: #1d4ed8; }
+    button.secondary { background: #334155; }
+    button.secondary:hover { background: #475569; }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title-area">
+      <h1>openttd-rust <span class="badge">Pure Decoupled Presentation</span></h1>
+    </div>
+    <div class="header-status">
+      <span style="color: var(--accent-green); font-weight: 600;">● Engine Online</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="viewport-panel">
+      <canvas id="gameCanvas" width="800" height="600"></canvas>
+      <div class="canvas-overlay">
+        <div><strong>Projection:</strong> Classical 2:1 Dimetric Isometric</div>
+        <div><strong>Controls:</strong> Drag to Pan | Scroll to Zoom</div>
+      </div>
+    </div>
+
+    <div class="sidebar">
+      <div class="card">
+        <h2>Simulation Controls</h2>
+        <div class="metric-row">
+          <span>Simulation Speed</span>
+          <span class="metric-val" id="speedVal">30 Hz</span>
+        </div>
+        <div class="metric-row">
+          <span>Current Tick</span>
+          <span class="metric-val" id="tickVal">0</span>
+        </div>
+        <div class="controls-row">
+          <button id="btnPlayPause">Pause</button>
+          <button id="btnStep" class="secondary">Step Tick</button>
+          <button id="btnReset" class="secondary">Reset</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Scenario Objectives</h2>
+        <div class="metric-row">
+          <span>Coastal Commuter</span>
+          <span class="metric-val" id="commuteVal" style="color: var(--accent-orange)">0 / 100 Trips</span>
+        </div>
+        <div class="metric-row">
+          <span>Company Treasury</span>
+          <span class="metric-val" id="treasuryVal" style="color: var(--accent-green)">$100,000 / $120,000</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Financial Ledger (RRD)</h2>
+        <div class="metric-row">
+          <span>Monthly Revenue</span>
+          <span class="metric-val" id="revVal">$0</span>
+        </div>
+        <div class="metric-row">
+          <span>Operating Expenses</span>
+          <span class="metric-val" id="expVal">$0</span>
+        </div>
+        <div class="metric-row">
+          <span>Operating Surplus</span>
+          <span class="metric-val" id="surplusVal">$0</span>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Architecture Decoupling</h2>
+        <p style="font-size: 0.8rem; color: var(--text-dim); line-height: 1.4;">
+          The Rust simulation core runs headlessly with deterministic microkernel phase scheduling.
+          This presentation host consumes visual state strictly via the agnostic <code>RenderBackend</code> interface.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>

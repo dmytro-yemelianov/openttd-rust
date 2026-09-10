@@ -11,6 +11,8 @@ members = [
     "crates/transport-tools",
     "crates/transport-scenario",
     "crates/transport-dashboard",
+    "crates/transport-cli",
+    "crates/transport-wasm",
 ]
 
 [workspace.package]
